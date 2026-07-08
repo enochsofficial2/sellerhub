@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>셀러허브</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F1B2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="셀러허브">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #EEF1F5;
+    --surface: #FFFFFF;
+    --navy: #0F1B2E;
+    --navy-soft: #1B2C47;
+    --ink: #12192B;
+    --ink-mute: #5C6478;
+    --line: #DCE1E9;
+    --amber: #E8A33D;
+    --amber-soft: #FBEBD2;
+    --coupang: #E4572E;
+    --coupang-soft: #FBE1D8;
+    --naver: #2DB400;
+    --naver-soft: #E1F5D8;
+    --danger: #D64545;
+    --radius: 14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--ink);
+    font-family:'Pretendard', -apple-system, sans-serif; overscroll-behavior-y:none;}
+  .mono{font-family:'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums;}
+
+  .app{max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));}
+
+  header.top{background:var(--navy); color:#fff; padding: calc(20px + env(safe-area-inset-top)) 20px 22px;
+    border-radius: 0 0 22px 22px; position:relative; overflow:hidden;}
+  header.top::after{content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px;
+    background: radial-gradient(circle, rgba(232,163,61,0.25), transparent 70%);}
+  .brand{display:flex; align-items:center; gap:8px; font-size:13px; letter-spacing:0.06em; color:var(--amber); font-weight:600;}
+  .brand .dot{width:6px; height:6px; border-radius:50%; background:var(--amber);}
+  h1.page-title{margin:6px 0 18px; font-size:22px; font-weight:700;}
+
+  .period-tabs{display:flex; gap:6px; background:rgba(255,255,255,0.08); padding:4px; border-radius:999px; width:fit-content;}
+  .period-tabs button{border:0; background:transparent; color:rgba(255,255,255,0.65); font-size:13px; font-weight:600;
+    padding:7px 14px; border-radius:999px; cursor:pointer; font-family:inherit;}
+  .period-tabs button.active{background:var(--amber); color:var(--navy);}
+
+  main{flex:1; padding: 18px 16px 8px;}
+
+  .hero-card{background:var(--surface); border-radius:var(--radius); padding:20px; box-shadow: 0 1px 2px rgba(15,27,46,0.04);
+    border:1px solid var(--line); margin-bottom:14px;}
+  .hero-label{font-size:13px; color:var(--ink-mute); margin-bottom:6px;}
+  .hero-amount{font-size:32px; font-weight:700; letter-spacing:-0.02em;}
+  .hero-amount .unit{font-size:16px; font-weight:600; color:var(--ink-mute); margin-left:2px;}
+  .hero-sub{display:flex; gap:16px; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);}
+  .hero-sub div{font-size:12px; color:var(--ink-mute);}
+  .hero-sub b{display:block; font-size:16px; color:var(--ink); margin-top:2px; font-weight:700;}
+
+  .section-title{font-size:14px; font-weight:700; margin: 20px 2px 10px; display:flex; justify-content:space-between; align-items:center;}
+  .section-title span.mute{font-size:12px; color:var(--ink-mute); font-weight:500;}
+
+  .cat-row{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px;
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .cat-name{font-size:14px; font-weight:600;}
+  .cat-count{font-size:12px; color:var(--ink-mute); margin-top:2px;}
+  .cat-amount{font-size:15px; font-weight:700;}
+
+  .empty{background:var(--surface); border:1px dashed var(--line); border-radius:12px; padding:28px 16px; text-align:center; color:var(--ink-mute); font-size:13px;}
+  .empty b{display:block; color:var(--ink); font-size:14px; margin-bottom:4px; font-weight:700;}
+
+  .refresh-btn{position:fixed; right:calc(16px + max(0px, (100vw - 520px)/2)); bottom:calc(88px + env(safe-area-inset-bottom));
+    width:46px; height:46px; border-radius:50%; background:var(--navy); color:#fff; border:0; box-shadow:0 4px 14px rgba(15,27,46,0.3);
+    display:flex; align-items:center; justify-content:center; font-size:18px;}
+  .refresh-btn.spinning svg{animation: spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  nav.bottom{position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--line);
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));}
+  .bottom-inner{max-width:520px; margin:0 auto; display:flex; justify-content:space-around;}
+  .nav-item{display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; color:var(--ink-mute);
+    background:none; border:0; font-family:inherit; padding:4px 10px;}
+  .nav-item.active{color:var(--navy); font-weight:700;}
+  .nav-item.disabled{opacity:0.4;}
+  .nav-icon{width:20px; height:20px;}
+
+  .badge{font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px;}
+  .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:96px; background:var(--navy); color:#fff;
+    font-size:12px; padding:9px 16px; border-radius:999px; opacity:0; pointer-events:none; transition:opacity .25s; z-index:50;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand"><span class="dot"></span>SELLER HUB</div>
+    <h1 class="page-title">오늘의 집계</h1>
+    <div class="period-tabs" id="periodTabs">
+      <button data-period="day" class="active">오늘</button>
+      <button data-period="week">이번 주</button>
+      <button data-period="month">이번 달</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero-card">
+      <div class="hero-label" id="heroLabel">오늘 매출</div>
+      <div class="hero-amount mono" id="heroAmount">0<span class="unit">원</span></div>
+      <div class="hero-sub">
+        <div>주문 건수<b class="mono" id="heroCount">0건</b></div>
+        <div>집계 시작<b id="heroSince">-</b></div>
+      </div>
+    </div>
+
+    <div class="section-title">카테고리별 집계 <span class="mute" id="catMeta"></span></div>
+    <div id="catList"></div>
+  </main>
+
+  <button class="refresh-btn" id="refreshBtn" aria-label="새로고침">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>
+    </svg>
+  </button>
+
+  <div class="toast" id="toast"></div>
+
+  <nav class="bottom">
+    <div class="bottom-inner">
+      <button class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        대시보드
+      </button>
+      <button class="nav-item disabled">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
+        주문
+      </button>
+      <button class="nav-item disabled">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        재고
+      </button>
+      <button class="nav-item disabled">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
+        내정보
+      </button>
+    </div>
+  </nav>
+
+</div>
+
+<script>
+  // ============================================
+  // 1. 여기에 5단계에서 받은 웹앱 URL을 넣으세요
+  // ============================================
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyuo-3Ex7NU-IVnRZLs9pIqBP3WLNXu70SxU94wBOLNBNOWMtS7YlLiM03sk9iE4e1bWQ/exec";
+
+  const periodLabels = { day: '오늘 매출', week: '이번 주 매출', month: '이번 달 매출' };
+  let currentPeriod = 'day';
+  let jsonpCounter = 0;
+
+  function callApi(action, params) {
+    return new Promise((resolve, reject) => {
+      const cbName = 'shCallback_' + (jsonpCounter++);
+      const script = document.createElement('script');
+      let url = WEBAPP_URL + '?action=' + encodeURIComponent(action) + '&callback=' + cbName;
+      for (const key in params) {
+        url += '&' + key + '=' + encodeURIComponent(params[key]);
+      }
+      window[cbName] = function (data) {
+        resolve(data);
+        delete window[cbName];
+        script.remove();
+      };
+      script.onerror = function () {
+        reject(new Error('네트워크 오류'));
+        delete window[cbName];
+        script.remove();
+      };
+      script.src = url;
+      document.body.appendChild(script);
+    });
+  }
+
+  function formatWon(n) {
+    return Number(n || 0).toLocaleString('ko-KR');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  async function loadSummary(period) {
+    const refreshBtn = document.getElementById('refreshBtn');
+    refreshBtn.classList.add('spinning');
+    try {
+      const data = await callApi('getSummary', { period });
+      if (data.error) throw new Error(data.error);
+
+      document.getElementById('heroLabel').textContent = periodLabels[period];
+      document.getElementById('heroAmount').innerHTML = formatWon(data.total.amount) + '<span class="unit">원</span>';
+      document.getElementById('heroCount').textContent = formatWon(data.total.count) + '건';
+
+      const since = data.rangeStart ? new Date(data.rangeStart) : null;
+      document.getElementById('heroSince').textContent = since
+        ? (since.getMonth() + 1) + '.' + since.getDate() + ' ~'
+        : '-';
+
+      const catListEl = document.getElementById('catList');
+      const categories = Object.keys(data.byCategory || {});
+      document.getElementById('catMeta').textContent = categories.length ? categories.length + '개 카테고리' : '';
+
+      if (!categories.length) {
+        catListEl.innerHTML = '<div class="empty"><b>아직 집계된 주문이 없어요</b>주문이 들어오면 카테고리별로 자동으로 정리돼요</div>';
+      } else {
+        catListEl.innerHTML = categories.map(cat => {
+          const c = data.byCategory[cat];
+          return `<div class="cat-row">
+            <div>
+              <div class="cat-name">${cat}</div>
+              <div class="cat-count mono">${formatWon(c.count)}건</div>
+            </div>
+            <div class="cat-amount mono">${formatWon(c.amount)}원</div>
+          </div>`;
+        }).join('');
+      }
+    } catch (e) {
+      showToast('불러오기 실패: ' + e.message);
+    } finally {
+      refreshBtn.classList.remove('spinning');
+    }
+  }
+
+  document.getElementById('periodTabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-period]');
+    if (!btn) return;
+    document.querySelectorAll('#periodTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPeriod = btn.dataset.period;
+    loadSummary(currentPeriod);
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', () => loadSummary(currentPeriod));
+
+  document.querySelectorAll('.nav-item.disabled').forEach(el => {
+    el.addEventListener('click', () => showToast('다음 단계에서 만들 예정이에요'));
+  });
+
+  // PWA: 서비스워커 등록 (오프라인 캐싱 + 홈화면 추가 지원)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+
+  loadSummary(currentPeriod);
+</script>
+</body>
+</html>
