@@ -78,6 +78,7 @@
       <button data-status="반품접수">반품접수</button>
       <button data-status="반품완료">반품완료</button>
       <button data-status="취소">취소</button>
+      <button data-status="__unsent__">송장미전송</button>
     </div>
   </header>
 
@@ -237,9 +238,12 @@
     refreshBtn.classList.add('spinning');
     const listEl = document.getElementById('orderList');
     try {
-      const data = await callApi('listOrders', status ? { status } : {});
+      const isUnsentFilter = status === '__unsent__';
+      const data = await callApi('listOrders', (status && !isUnsentFilter) ? { status } : {});
       if (data.error) throw new Error(data.error);
-      currentOrders = data || [];
+      currentOrders = isUnsentFilter
+        ? (data || []).filter(o => o['채널전송상태'] === '실패')
+        : (data || []);
 
       const newCount = currentOrders.filter(o => (o['주문상태'] || '신규') === '신규').length;
       const bulkBar = document.getElementById('bulkPrintBar');
@@ -274,6 +278,7 @@
           <div class="order-top">
             <span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널'] || '기타'}</span>
             <span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
+            ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">송장미전송</span>' : ''}
             <span class="order-date">${dateStr}</span>
           </div>
           <div class="order-product">${o['상품명'] || '-'}</div>
@@ -419,6 +424,7 @@
       <div class="detail-row"><span>배송지</span><span>${o['구매자주소']||'-'}</span></div>
       <div class="detail-row"><span>수량 / 금액</span><span>${formatWon(o['수량'])}개 · ${formatWon(o['판매가'])}원</span></div>
       <div class="detail-row"><span>현재 상태</span><span>${o['주문상태']||'신규'}</span></div>
+      ${o['채널전송상태'] ? `<div class="detail-row"><span>채널 전송</span><span style="color:${o['채널전송상태']==='실패' ? 'var(--danger)' : 'inherit'}">${o['채널전송상태']}</span></div>` : ''}
     `;
 
     const actions = document.getElementById('detailActions');
@@ -428,6 +434,9 @@
     }
     if (o['주문상태'] === '송장출력완료') {
       actionHtml += `<button class="btn btn-primary" id="btnGoSend">송장번호 전송</button>`;
+    }
+    if (o['채널전송상태'] === '실패') {
+      actionHtml += `<button class="btn btn-danger" id="btnRetrySync">채널로 재전송</button>`;
     }
     if (o['주문상태'] !== '신규' && o['주문상태'] !== '취소') {
       actionHtml += `<button class="btn btn-ghost" id="btnPrintLabel">송장 출력물 보기</button>`;
@@ -457,6 +466,24 @@
     if (sendBtn) sendBtn.addEventListener('click', () => {
       closeSheet('sheetOverlay', 'detailSheet');
       setTimeout(() => openSheet('sendOverlay', 'sendSheet'), 200);
+    });
+
+    const retryBtn = document.getElementById('btnRetrySync');
+    if (retryBtn) retryBtn.addEventListener('click', async () => {
+      retryBtn.disabled = true;
+      retryBtn.textContent = '재전송 중...';
+      try {
+        const res = await callApi('retryChannelSync', { orderId: activeOrderId });
+        if (res.error) throw new Error(res.error);
+        showToast(res.channelSync && res.channelSync.success ? '재전송 성공' : '재전송 실패: ' + (res.channelSync ? res.channelSync.error : ''));
+        closeSheet('sheetOverlay', 'detailSheet');
+        loadOrders(currentStatus);
+      } catch (e) {
+        showToast('처리 실패: ' + e.message);
+      } finally {
+        retryBtn.disabled = false;
+        retryBtn.textContent = '채널로 재전송';
+      }
     });
 
     const cancelBtn = document.getElementById('btnGoCancel');
