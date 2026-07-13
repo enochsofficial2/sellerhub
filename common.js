@@ -49,6 +49,7 @@ function channelBadgeClass(channel) {
 
 function statusBadgeClass(status) {
   if (status === '신규') return 'badge status-new';
+  if (status === '보류') return 'badge status-return';
   if (status === '송장출력완료') return 'badge status-new';
   if (status === '발송완료' || status === '배송중' || status === '배송완료') return 'badge status-shipped';
   if (status === '반품접수') return 'badge status-return';
