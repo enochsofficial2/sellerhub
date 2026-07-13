@@ -59,56 +59,72 @@
     return new URLSearchParams(window.location.search).get(name);
   }
 
+  function renderLabel(order, store) {
+    return `
+      <div class="label">
+        <div class="label-header">
+          <div class="label-brand">SELLER HUB 송장</div>
+          <div class="label-channel">${order['판매채널'] || '기타'}</div>
+        </div>
+
+        <div class="label-section">
+          <div class="label-section-title">받는사람</div>
+          <div class="label-name">${order['구매자명'] || '-'}</div>
+          <div class="label-detail">${order['구매자연락처'] || '-'}</div>
+          <div class="label-detail">${order['구매자주소'] || '-'}</div>
+        </div>
+
+        <div class="label-divider"></div>
+
+        <div class="label-section">
+          <div class="label-section-title">보내는사람</div>
+          <div class="label-name">${store.name || '(내정보에서 출고지 정보를 설정해주세요)'}</div>
+          <div class="label-detail">${store.phone || ''}</div>
+          <div class="label-detail">${store.address || ''}</div>
+        </div>
+
+        <div class="label-divider"></div>
+
+        <div class="label-section">
+          <div class="label-section-title">상품정보</div>
+          <div class="label-product">${order['상품명'] || '-'}</div>
+          <div class="label-product-meta">수량 ${order['수량'] || 0}개 · 주문번호 ${order['채널주문번호'] || '-'}</div>
+        </div>
+
+        <div class="label-invoice">
+          <div class="label-invoice-row"><span>택배사</span><span>${order['송장_택배사'] || '-'}</span></div>
+          <div class="label-invoice-row"><span>송장번호</span><span>${order['송장_송장번호'] || '-'}</span></div>
+        </div>
+      </div>
+    `;
+  }
+
   async function render() {
-    const orderId = getParam('orderId');
+    const singleId = getParam('orderId');
+    const multiIds = getParam('orderIds');
     const contentEl = document.getElementById('content');
-    if (!orderId) { contentEl.innerHTML = '<div class="error-box">주문 정보가 없어요</div>'; return; }
+
+    const orderIds = multiIds ? multiIds.split(',').filter(Boolean) : (singleId ? [singleId] : []);
+    if (!orderIds.length) { contentEl.innerHTML = '<div class="error-box">주문 정보가 없어요</div>'; return; }
 
     try {
-      const [order, store] = await Promise.all([
-        callApi('getOrderDetail', { orderId }),
-        callApi('getStoreInfo', {})
-      ]);
-      if (order.error) throw new Error(order.error);
+      const store = await callApi('getStoreInfo', {});
+      const orders = await Promise.all(orderIds.map(id => callApi('getOrderDetail', { orderId: id })));
+      const validOrders = orders.filter(o => !o.error);
+
+      if (!validOrders.length) throw new Error('출력할 주문 정보를 찾을 수 없어요');
+
+      // 상품명 기준 정렬 (같은 상품끼리 모아서 포장하기 편하게)
+      validOrders.sort((a, b) => String(a['상품명'] || '').localeCompare(String(b['상품명'] || ''), 'ko'));
 
       contentEl.className = '';
-      contentEl.innerHTML = `
-        <div class="label">
-          <div class="label-header">
-            <div class="label-brand">SELLER HUB 송장</div>
-            <div class="label-channel">${order['판매채널'] || '기타'}</div>
-          </div>
-
-          <div class="label-section">
-            <div class="label-section-title">받는사람</div>
-            <div class="label-name">${order['구매자명'] || '-'}</div>
-            <div class="label-detail">${order['구매자연락처'] || '-'}</div>
-            <div class="label-detail">${order['구매자주소'] || '-'}</div>
-          </div>
-
-          <div class="label-divider"></div>
-
-          <div class="label-section">
-            <div class="label-section-title">보내는사람</div>
-            <div class="label-name">${store.name || '(내정보에서 출고지 정보를 설정해주세요)'}</div>
-            <div class="label-detail">${store.phone || ''}</div>
-            <div class="label-detail">${store.address || ''}</div>
-          </div>
-
-          <div class="label-divider"></div>
-
-          <div class="label-section">
-            <div class="label-section-title">상품정보</div>
-            <div class="label-product">${order['상품명'] || '-'}</div>
-            <div class="label-product-meta">수량 ${order['수량'] || 0}개 · 주문번호 ${order['채널주문번호'] || '-'}</div>
-          </div>
-
-          <div class="label-invoice">
-            <div class="label-invoice-row"><span>택배사</span><span>${order['송장_택배사'] || '-'}</span></div>
-            <div class="label-invoice-row"><span>송장번호</span><span>${order['송장_송장번호'] || '-'}</span></div>
-          </div>
-        </div>
-      `;
+      if (validOrders.length > 1) {
+        contentEl.innerHTML = `<div style="max-width:400px; margin:0 auto 14px; font-size:12px; color:#5C6478; text-align:center;">
+          총 ${validOrders.length}건 · 상품명순 정렬됨
+        </div>` + validOrders.map(o => renderLabel(o, store)).join('<div style="height:14px;"></div>');
+      } else {
+        contentEl.innerHTML = renderLabel(validOrders[0], store);
+      }
     } catch (e) {
       contentEl.className = 'error-box';
       contentEl.innerHTML = '불러오기 실패: ' + e.message;
