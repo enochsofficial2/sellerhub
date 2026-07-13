@@ -83,14 +83,6 @@
       </div>
       <div class="hour-grid" id="hourGrid"></div>
     </div>
-
-    <div class="insight-card">
-      <div class="insight-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
-        담당자별 처리 건수
-      </div>
-      <div id="staffPerf"></div>
-    </div>
   </main>
 
   <div class="toast" id="toast"></div>
@@ -133,7 +125,6 @@
       renderTopProducts(data.topProducts);
       renderChannels(data.channelBreakdown);
       renderHourBlocks(data.hourBlocks);
-      renderStaffPerf(data.staffPerformance);
     } catch (e) {
       showToast('불러오기 실패: ' + e.message);
     }
@@ -182,20 +173,6 @@
     el.innerHTML = entries.map(e => `<div class="hour-block ${e.value === max && max > 0 ? 'peak' : ''}">
       <div class="hour-block-label">${e.label}</div>
       <div class="hour-block-value mono">${e.value}건</div>
-    </div>`).join('');
-  }
-
-  function renderStaffPerf(staff) {
-    const el = document.getElementById('staffPerf');
-    if (!staff.length) {
-      el.innerHTML = `<div class="empty" style="padding:20px;"><b>아직 데이터가 없어요</b>담당자를 지정해서 주문을 처리하면 표시돼요</div>`;
-      return;
-    }
-    const max = Math.max(...staff.map(s => s.count), 1);
-    el.innerHTML = staff.map(s => `<div class="staff-perf-row">
-      <div class="staff-perf-name">${s.staff}</div>
-      <div class="staff-perf-bar-track"><div class="staff-perf-bar-fill" style="width:${Math.round((s.count/max)*100)}%"></div></div>
-      <div class="staff-perf-count mono">${s.count}건</div>
     </div>`).join('');
   }
 
