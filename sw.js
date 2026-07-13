@@ -1,5 +1,5 @@
-const CACHE_NAME = 'sellerhub-v3';
-const CORE_ASSETS = ['./index.html', './orders.html', './inventory.html', './profile.html', './style.css', './common.js', './manifest.json'];
+const CACHE_NAME = 'sellerhub-v4';
+const CORE_ASSETS = ['./index.html', './orders.html', './inventory.html', './profile.html', './insights.html', './style.css', './common.js', './manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
