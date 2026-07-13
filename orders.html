@@ -323,11 +323,19 @@
     if (o['주문상태'] === '신규') {
       actionHtml += `<button class="btn btn-primary" id="btnGoShip">송장 등록</button>`;
     }
+    if (o['주문상태'] === '발송완료') {
+      actionHtml += `<button class="btn btn-ghost" id="btnPrintLabel">송장 출력</button>`;
+    }
     if (o['주문상태'] !== '반품접수' && o['주문상태'] !== '취소') {
       actionHtml += `<button class="btn btn-danger" id="btnGoReturn">반품 접수</button>`;
     }
     actionHtml += '</div>';
     actions.innerHTML = actionHtml;
+
+    const printBtn = document.getElementById('btnPrintLabel');
+    if (printBtn) printBtn.addEventListener('click', () => {
+      window.open('print.html?orderId=' + encodeURIComponent(o['주문ID']), '_blank');
+    });
 
     const goShip = document.getElementById('btnGoShip');
     if (goShip) goShip.addEventListener('click', () => {
@@ -360,7 +368,16 @@
     try {
       const res = await callApi('createShipment', { orderId: activeOrderId, carrier, trackingNo, staffId: staff });
       if (res.error) throw new Error(res.error);
-      showToast('송장 등록 완료 - 재고가 자동 차감됐어요');
+
+      if (res.channelSync && res.channelSync.attempted) {
+        if (res.channelSync.success) {
+          showToast('송장 등록 + 채널로 자동 전송 완료');
+        } else {
+          showToast('송장은 등록됐지만 채널 전송 실패: ' + (res.channelSync.error || '') + ' — 직접 사이트에서도 입력해주세요');
+        }
+      } else {
+        showToast('송장 등록 완료 - 재고가 자동 차감됐어요');
+      }
       closeSheet('shipOverlay', 'shipSheet');
       document.getElementById('shipTrackingNo').value = '';
       document.getElementById('shipStaff').value = '';
