@@ -64,6 +64,7 @@
     <div class="filter-tabs" id="filterTabs">
       <button data-status="" class="active">전체</button>
       <button data-status="신규">신규</button>
+      <button data-status="송장출력완료">송장출력완료</button>
       <button data-status="발송완료">발송완료</button>
       <button data-status="반품접수">반품접수</button>
       <button data-status="반품완료">반품완료</button>
@@ -124,30 +125,35 @@
   <div id="detailActions"></div>
 </div>
 
-<!-- 송장 등록 폼 바텀시트 -->
+<!-- 송장 출력(자동발급) 확인 바텀시트 -->
 <div class="sheet-overlay" id="shipOverlay"></div>
 <div class="sheet" id="shipSheet">
   <div class="sheet-handle"></div>
-  <h2>송장 등록</h2>
-  <div class="sheet-sub">등록하면 재고가 자동으로 차감돼요</div>
-  <div class="field">
-    <label>택배사</label>
-    <select id="shipCarrier">
-      <option>CJ대한통운</option><option>롯데택배</option><option>한진택배</option>
-      <option>로젠택배</option><option>우체국택배</option><option>기타</option>
-    </select>
-  </div>
-  <div class="field">
-    <label>송장번호</label>
-    <input type="text" id="shipTrackingNo" placeholder="송장번호 입력">
-  </div>
+  <h2>송장 출력</h2>
+  <div class="sheet-sub">택배사(CJ대한통운)로 송장번호가 자동 발급되고, 인쇄용 라벨이 새 창에 열려요</div>
   <div class="field">
     <label>담당자</label>
     <input type="text" id="shipStaff" list="staffList" placeholder="처리한 사람 이름">
   </div>
   <div class="btn-row">
     <button class="btn btn-ghost" id="shipCancel">취소</button>
-    <button class="btn btn-primary" id="shipSubmit">등록 완료</button>
+    <button class="btn btn-primary" id="shipSubmit">송장번호 발급 + 출력</button>
+  </div>
+</div>
+
+<!-- 송장번호 채널 전송 확인 바텀시트 -->
+<div class="sheet-overlay" id="sendOverlay"></div>
+<div class="sheet" id="sendSheet">
+  <div class="sheet-handle"></div>
+  <h2>송장번호 전송</h2>
+  <div class="sheet-sub">해당 쇼핑몰(쿠팡/네이버 등)로 송장번호를 전송하고, 재고를 차감해요</div>
+  <div class="field">
+    <label>담당자</label>
+    <input type="text" id="sendStaff" list="staffList" placeholder="처리한 사람 이름">
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="sendCancel">취소</button>
+    <button class="btn btn-primary" id="sendSubmit">전송하기</button>
   </div>
 </div>
 
@@ -260,7 +266,7 @@
           <div class="order-bottom">
             <span class="order-amount mono">${formatWon(o['판매가'])}원</span>
             ${o['주문상태'] === '신규'
-              ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">바로 송장등록</button>`
+              ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">바로 송장출력</button>`
               : `<span class="order-staff">${o['담당자ID'] ? '담당 ' + o['담당자ID'] : '담당자 미지정'}</span>`}
           </div>
         </div>`;
@@ -347,10 +353,13 @@
     const actions = document.getElementById('detailActions');
     let actionHtml = '<div class="btn-row" style="margin-top:16px;">';
     if (o['주문상태'] === '신규') {
-      actionHtml += `<button class="btn btn-primary" id="btnGoShip">송장 등록</button>`;
+      actionHtml += `<button class="btn btn-primary" id="btnGoShip">송장 출력</button>`;
+    }
+    if (o['주문상태'] === '송장출력완료') {
+      actionHtml += `<button class="btn btn-primary" id="btnGoSend">송장번호 전송</button>`;
     }
     if (o['주문상태'] !== '신규' && o['주문상태'] !== '취소') {
-      actionHtml += `<button class="btn btn-ghost" id="btnPrintLabel">송장 출력</button>`;
+      actionHtml += `<button class="btn btn-ghost" id="btnPrintLabel">송장 출력물 보기</button>`;
     }
     if (o['주문상태'] === '신규') {
       actionHtml += `<button class="btn btn-danger" id="btnGoCancel">취소 처리</button>`;
@@ -367,6 +376,12 @@
     const printBtn = document.getElementById('btnPrintLabel');
     if (printBtn) printBtn.addEventListener('click', () => {
       window.open('print.html?orderId=' + encodeURIComponent(o['주문ID']), '_blank');
+    });
+
+    const sendBtn = document.getElementById('btnGoSend');
+    if (sendBtn) sendBtn.addEventListener('click', () => {
+      closeSheet('sheetOverlay', 'detailSheet');
+      setTimeout(() => openSheet('sendOverlay', 'sendSheet'), 200);
     });
 
     const cancelBtn = document.getElementById('btnGoCancel');
@@ -411,30 +426,50 @@
   document.getElementById('shipOverlay').addEventListener('click', () => closeSheet('shipOverlay', 'shipSheet'));
   document.getElementById('shipCancel').addEventListener('click', () => closeSheet('shipOverlay', 'shipSheet'));
   document.getElementById('shipSubmit').addEventListener('click', async () => {
-    const carrier = document.getElementById('shipCarrier').value;
-    const trackingNo = document.getElementById('shipTrackingNo').value.trim();
     const staff = document.getElementById('shipStaff').value.trim();
-    if (!trackingNo) { showToast('송장번호를 입력해주세요'); return; }
     if (!staff) { showToast('담당자를 입력해주세요'); return; }
 
     const btn = document.getElementById('shipSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('createShipment', { orderId: activeOrderId, carrier, trackingNo, staffId: staff });
+      const res = await callApi('issueInvoice', { orderId: activeOrderId, staffId: staff });
+      if (res.error) throw new Error(res.error);
+
+      showToast(res.isReal
+        ? ('송장번호 발급 완료: ' + res.trackingNo)
+        : ('임시 송장번호 발급: ' + res.trackingNo + ' (CJ API 연동 전)'));
+      closeSheet('shipOverlay', 'shipSheet');
+      document.getElementById('shipStaff').value = '';
+      window.open('print.html?orderId=' + encodeURIComponent(activeOrderId), '_blank');
+      loadOrders(currentStatus);
+    } catch (e) {
+      showToast('처리 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('sendOverlay').addEventListener('click', () => closeSheet('sendOverlay', 'sendSheet'));
+  document.getElementById('sendCancel').addEventListener('click', () => closeSheet('sendOverlay', 'sendSheet'));
+  document.getElementById('sendSubmit').addEventListener('click', async () => {
+    const staff = document.getElementById('sendStaff').value.trim();
+    if (!staff) { showToast('담당자를 입력해주세요'); return; }
+
+    const btn = document.getElementById('sendSubmit');
+    btn.disabled = true;
+    try {
+      const res = await callApi('sendInvoiceToChannel', { orderId: activeOrderId, staffId: staff });
       if (res.error) throw new Error(res.error);
 
       if (res.channelSync && res.channelSync.attempted) {
-        if (res.channelSync.success) {
-          showToast('송장 등록 + 채널로 자동 전송 완료');
-        } else {
-          showToast('송장은 등록됐지만 채널 전송 실패: ' + (res.channelSync.error || '') + ' — 직접 사이트에서도 입력해주세요');
-        }
+        showToast(res.channelSync.success
+          ? '전송 완료 + 재고 차감됨'
+          : ('채널 전송 실패: ' + (res.channelSync.error || '') + ' — 발송완료 처리는 됐어요'));
       } else {
-        showToast('송장 등록 완료 - 재고가 자동 차감됐어요');
+        showToast('발송완료 처리됨 - 재고가 차감됐어요');
       }
-      closeSheet('shipOverlay', 'shipSheet');
-      document.getElementById('shipTrackingNo').value = '';
-      document.getElementById('shipStaff').value = '';
+      closeSheet('sendOverlay', 'sendSheet');
+      document.getElementById('sendStaff').value = '';
       loadOrders(currentStatus);
     } catch (e) {
       showToast('처리 실패: ' + e.message);
