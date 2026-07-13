@@ -51,6 +51,7 @@ function statusBadgeClass(status) {
   if (status === '신규') return 'badge status-new';
   if (status === '발송완료' || status === '배송중' || status === '배송완료') return 'badge status-shipped';
   if (status === '반품접수') return 'badge status-return';
+  if (status === '반품완료') return 'badge status-cancel';
   if (status === '취소') return 'badge status-cancel';
   return 'badge';
 }
