@@ -316,14 +316,15 @@
       const orders = await callApi('listOrders', {});
       if (orders.error) throw new Error(orders.error);
 
-      const counts = { '신규': 0, '발송완료': 0, '반품접수': 0, '반품완료': 0, '취소': 0 };
+      const counts = { '신규': 0, '송장출력완료': 0, '발송완료': 0, '반품접수': 0, '반품완료': 0, '취소': 0 };
       orders.forEach(o => {
         const s = o['주문상태'] || '신규';
         if (counts[s] !== undefined) counts[s]++;
       });
 
       const rows = [
-        { key: '신규', label: '송장 대기', warn: false },
+        { key: '신규', label: '송장출력 대기', warn: false },
+        { key: '송장출력완료', label: '전송 대기', warn: false },
         { key: '발송완료', label: '발송완료', warn: false },
         { key: '반품접수', label: '반품접수', warn: true },
         { key: '반품완료', label: '반품완료(재입고)', warn: false },
