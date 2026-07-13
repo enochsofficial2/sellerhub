@@ -48,6 +48,11 @@
   .detail-row{display:flex; justify-content:space-between; font-size:13px; padding:9px 0; border-bottom:1px solid var(--bg);}
   .detail-row span:first-child{color:var(--ink-mute);}
   .detail-row span:last-child{font-weight:600; text-align:right; max-width:60%;}
+
+  @media (min-width: 900px) {
+    #orderList{display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:10px; align-items:start;}
+    #orderList .order-card{margin-bottom:0;}
+  }
 </style>
 </head>
 <body>
