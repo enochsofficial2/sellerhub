@@ -145,8 +145,6 @@
     <button id="adjustPlus">+</button>
   </div>
   <div class="field" style="margin-top:14px;"><label>사유</label><input type="text" id="adjustReason" placeholder="예: 실사 오차, 파손 등"></div>
-  <div class="field"><label>담당자</label><input type="text" id="adjustStaff" list="staffList" placeholder="이름 입력"></div>
-  <datalist id="staffList"></datalist>
   <div class="btn-row">
     <button class="btn btn-ghost" id="adjustCancel">취소</button>
     <button class="btn btn-primary" id="adjustSubmit">반영</button>
@@ -255,15 +253,6 @@
     }
   });
 
-  // 담당자 자동완성 목록
-  (async function loadStaffSuggestions() {
-    try {
-      const staff = await callApi('listStaff', {});
-      if (staff.error) return;
-      document.getElementById('staffList').innerHTML = staff.map(s => `<option value="${s['이름']}">`).join('');
-    } catch (e) {}
-  })();
-
   document.getElementById('addProductBtn').addEventListener('click', () => openSheet('addOverlay', 'addSheet'));
   document.getElementById('addCancel').addEventListener('click', () => closeSheet('addOverlay', 'addSheet'));
   document.getElementById('addOverlay').addEventListener('click', () => closeSheet('addOverlay', 'addSheet'));
@@ -310,15 +299,13 @@
   document.getElementById('adjustSubmit').addEventListener('click', async () => {
     const delta = Number(document.getElementById('adjustDelta').value);
     const reason = document.getElementById('adjustReason').value.trim();
-    const staff = document.getElementById('adjustStaff').value.trim();
     if (!delta) { showToast('조정할 수량을 입력해주세요'); return; }
     if (!reason) { showToast('사유를 입력해주세요'); return; }
-    if (!staff) { showToast('담당자를 입력해주세요'); return; }
 
     const btn = document.getElementById('adjustSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('adjustStockManual', { productId: activeProductId, delta, reason, staffId: staff });
+      const res = await callApi('adjustStockManual', { productId: activeProductId, delta, reason });
       if (res.error) throw new Error(res.error);
       showToast('재고가 반영됐어요');
       closeSheet('adjustOverlay', 'adjustSheet');
