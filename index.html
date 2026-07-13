@@ -311,6 +311,7 @@
       const s = o['주문상태'] || '신규';
       if (counts[s] !== undefined) counts[s]++;
     });
+    const unsentCount = orders.filter(o => o['채널전송상태'] === '실패').length;
 
     const rows = [
       { key: '신규', label: '송장출력 대기', warn: false },
@@ -330,7 +331,11 @@
         <span class="pipeline-label">${r.label}</span>
         <span class="pipeline-count mono">${formatWon(n)}건</span>
       </div>`;
-    }).join('');
+    }).join('') + `<div class="pipeline-row${unsentCount > 0 ? ' warn' : ''}">
+      <span class="pipeline-dot"></span>
+      <span class="pipeline-label">송장번호 미전송</span>
+      <span class="pipeline-count mono">${formatWon(unsentCount)}건</span>
+    </div>`;
   }
 
   function renderTrend(trend) {
