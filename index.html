@@ -14,28 +14,52 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-  .period-tabs{display:flex; gap:6px; background:rgba(255,255,255,0.08); padding:4px; border-radius:999px; width:fit-content;}
-  .period-tabs button{border:0; background:transparent; color:rgba(255,255,255,0.65); font-size:13px; font-weight:600;
-    padding:7px 14px; border-radius:999px; cursor:pointer; font-family:inherit;}
-  .period-tabs button.active{background:var(--amber); color:var(--navy);}
+  header.top{background:var(--navy); color:#fff; padding: calc(22px + env(safe-area-inset-top)) 20px 26px;
+    border-radius: 0 0 26px 26px; position:relative; overflow:hidden;}
+  header.top::before{content:""; position:absolute; inset:0; opacity:0.5;
+    background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 16px 16px; mask-image: linear-gradient(to bottom, black, transparent 85%);}
+  header.top::after{content:""; position:absolute; right:-50px; top:-60px; width:200px; height:200px;
+    background: radial-gradient(circle, rgba(232,163,61,0.3), transparent 70%);}
+  .brand{position:relative; display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:0.12em; color:var(--amber); font-weight:700;}
+  .brand .dot{width:6px; height:6px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 4px rgba(232,163,61,0.18);}
+  h1.page-title{position:relative; margin:8px 0 20px; font-size:25px; font-weight:800; letter-spacing:-0.01em;}
 
-  .hero-card{background:var(--surface); border-radius:var(--radius); padding:20px; box-shadow: 0 1px 2px rgba(15,27,46,0.04);
-    border:1px solid var(--line); margin-bottom:14px;}
-  .hero-label{font-size:13px; color:var(--ink-mute); margin-bottom:6px;}
-  .hero-amount{font-size:32px; font-weight:700; letter-spacing:-0.02em;}
-  .hero-amount .unit{font-size:16px; font-weight:600; color:var(--ink-mute); margin-left:2px;}
-  .hero-sub{display:flex; gap:16px; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);}
-  .hero-sub div{font-size:12px; color:var(--ink-mute);}
-  .hero-sub b{display:block; font-size:16px; color:var(--ink); margin-top:2px; font-weight:700;}
+  .period-tabs{position:relative; display:flex; gap:4px; background:rgba(255,255,255,0.07); padding:4px; border-radius:999px; width:fit-content;}
+  .period-tabs button{border:0; background:transparent; color:rgba(255,255,255,0.6); font-size:13px; font-weight:600;
+    padding:7px 15px; border-radius:999px; cursor:pointer; font-family:inherit; transition:background .15s;}
+  .period-tabs button.active{background:var(--amber); color:var(--navy); box-shadow:0 2px 8px rgba(232,163,61,0.4);}
 
-  .section-title{font-size:14px; font-weight:700; margin: 20px 2px 10px; display:flex; justify-content:space-between; align-items:center;}
+  .hero-card{background:var(--surface); border-radius:18px; padding:22px 20px; box-shadow: 0 4px 18px rgba(15,27,46,0.06);
+    border:1px solid var(--line); margin-bottom:16px; position:relative;}
+  .hero-top{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px;}
+  .hero-label{font-size:12.5px; color:var(--ink-mute); font-weight:600; display:flex; align-items:center; gap:6px;}
+  .hero-label-icon{width:26px; height:26px; border-radius:8px; background:var(--amber-soft); color:#8a5c14;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .hero-amount{font-size:36px; font-weight:800; letter-spacing:-0.03em; line-height:1;}
+  .hero-amount .unit{font-size:15px; font-weight:700; color:var(--ink-mute); margin-left:3px;}
+  .hero-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; padding-top:16px; border-top:1px dashed var(--line);}
+  .hero-stat-label{font-size:11.5px; color:var(--ink-mute); margin-bottom:3px;}
+  .hero-stat-value{font-size:16px; font-weight:700;}
+
+  .section-title{font-size:14.5px; font-weight:800; margin: 22px 2px 12px; display:flex; justify-content:space-between; align-items:center;}
   .section-title span.mute{font-size:12px; color:var(--ink-mute); font-weight:500;}
 
-  .cat-row{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px;
-    display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
-  .cat-name{font-size:14px; font-weight:600;}
-  .cat-count{font-size:12px; color:var(--ink-mute); margin-top:2px;}
-  .cat-amount{font-size:15px; font-weight:700;}
+  .cat-row{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 16px 15px;
+    margin-bottom:8px;}
+  .cat-row-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;}
+  .cat-rank{display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:6px;
+    background:var(--bg); color:var(--ink-mute); font-size:10.5px; font-weight:800; margin-right:8px; flex-shrink:0;}
+  .cat-name{font-size:14px; font-weight:700; display:flex; align-items:center;}
+  .cat-count{font-size:11.5px; color:var(--ink-mute); margin-top:2px; margin-left:28px;}
+  .cat-amount{font-size:15px; font-weight:800;}
+  .cat-bar-track{height:7px; border-radius:999px; background:var(--bg); overflow:hidden;}
+  .cat-bar-fill{height:100%; border-radius:999px; background:linear-gradient(90deg, var(--amber), #F0BC6A);}
+
+  .empty{background:var(--surface); border:1px dashed var(--line); border-radius:16px; padding:36px 20px; text-align:center; color:var(--ink-mute); font-size:12.5px;}
+  .empty svg{margin-bottom:12px; color:var(--line);}
+  .empty b{display:block; color:var(--ink); font-size:14.5px; margin-bottom:5px; font-weight:800;}
+
 
   .refresh-btn{position:fixed; right:calc(16px + max(0px, (100vw - 520px)/2)); bottom:calc(88px + env(safe-area-inset-bottom));
     width:46px; height:46px; border-radius:50%; background:var(--navy); color:#fff; border:0; box-shadow:0 4px 14px rgba(15,27,46,0.3);
@@ -85,11 +109,24 @@
     </div>
 
     <div class="hero-card">
-      <div class="hero-label" id="heroLabel">오늘 매출</div>
+      <div class="hero-top">
+        <div class="hero-label">
+          <span class="hero-label-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
+          <span id="heroLabel">오늘 매출</span>
+        </div>
+      </div>
       <div class="hero-amount mono" id="heroAmount">0<span class="unit">원</span></div>
-      <div class="hero-sub">
-        <div>주문 건수<b class="mono" id="heroCount">0건</b></div>
-        <div>집계 시작<b id="heroSince">-</b></div>
+      <div class="hero-grid">
+        <div>
+          <div class="hero-stat-label">주문 건수</div>
+          <div class="hero-stat-value mono" id="heroCount">0건</div>
+        </div>
+        <div>
+          <div class="hero-stat-label">평균 주문가</div>
+          <div class="hero-stat-value mono" id="heroAvg">0원</div>
+        </div>
       </div>
     </div>
 
@@ -143,27 +180,35 @@
       document.getElementById('heroLabel').textContent = periodLabels[period];
       document.getElementById('heroAmount').innerHTML = formatWon(data.total.amount) + '<span class="unit">원</span>';
       document.getElementById('heroCount').textContent = formatWon(data.total.count) + '건';
-
-      const since = data.rangeStart ? new Date(data.rangeStart) : null;
-      document.getElementById('heroSince').textContent = since
-        ? (since.getMonth() + 1) + '.' + since.getDate() + ' ~'
-        : '-';
+      const avg = data.total.count > 0 ? Math.round(data.total.amount / data.total.count) : 0;
+      document.getElementById('heroAvg').textContent = formatWon(avg) + '원';
 
       const catListEl = document.getElementById('catList');
       const categories = Object.keys(data.byCategory || {});
       document.getElementById('catMeta').textContent = categories.length ? categories.length + '개 카테고리' : '';
 
       if (!categories.length) {
-        catListEl.innerHTML = '<div class="empty"><b>아직 집계된 주문이 없어요</b>주문이 들어오면 카테고리별로 자동으로 정리돼요</div>';
+        catListEl.innerHTML = `<div class="empty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+          <b>아직 집계된 주문이 없어요</b>주문이 들어오면 카테고리별로 자동으로 정리돼요
+        </div>`;
       } else {
-        catListEl.innerHTML = categories.map(cat => {
-          const c = data.byCategory[cat];
+        const sorted = categories
+          .map(cat => ({ cat, ...data.byCategory[cat] }))
+          .sort((a, b) => b.amount - a.amount);
+        const maxAmount = Math.max(...sorted.map(c => c.amount), 1);
+
+        catListEl.innerHTML = sorted.map((c, i) => {
+          const pct = Math.max(4, Math.round((c.amount / maxAmount) * 100));
           return `<div class="cat-row">
-            <div>
-              <div class="cat-name">${cat}</div>
-              <div class="cat-count mono">${formatWon(c.count)}건</div>
+            <div class="cat-row-top">
+              <div>
+                <div class="cat-name"><span class="cat-rank">${i + 1}</span>${c.cat}</div>
+                <div class="cat-count mono">${formatWon(c.count)}건</div>
+              </div>
+              <div class="cat-amount mono">${formatWon(c.amount)}원</div>
             </div>
-            <div class="cat-amount mono">${formatWon(c.amount)}원</div>
+            <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%"></div></div>
           </div>`;
         }).join('');
       }
