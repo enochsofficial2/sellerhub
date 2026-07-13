@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>재고관리 - 셀러허브</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F1B2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .search-row{display:flex; gap:8px;}
+  .search-box{flex:1; background:rgba(255,255,255,0.1); border-radius:12px; padding:11px 14px; display:flex; align-items:center; gap:8px;}
+  .search-box input{background:none; border:0; color:#fff; font-size:14px; font-family:inherit; flex:1; outline:none;}
+  .search-box input::placeholder{color:rgba(255,255,255,0.5);}
+  .search-box svg{color:rgba(255,255,255,0.5); flex-shrink:0;}
+
+  .stock-summary{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+  .stock-summary-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 16px;}
+  .stock-summary-label{font-size:11.5px; color:var(--ink-mute); margin-bottom:4px;}
+  .stock-summary-value{font-size:19px; font-weight:800;}
+  .stock-summary-value.warn{color:var(--danger);}
+
+  .product-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:15px 16px; margin-bottom:9px; cursor:pointer;}
+  .product-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .product-name{font-size:14.5px; font-weight:700; margin-bottom:3px;}
+  .product-meta{font-size:11.5px; color:var(--ink-mute);}
+  .product-stock{text-align:right; flex-shrink:0;}
+  .product-stock-value{font-size:18px; font-weight:800;}
+  .product-stock-unit{font-size:11.5px; color:var(--ink-mute); font-weight:600;}
+  .product-card.low .product-stock-value{color:var(--danger);}
+  .low-badge{display:inline-block; margin-top:4px; font-size:10px; font-weight:800; color:var(--danger);
+    background:var(--danger-soft); padding:2px 7px; border-radius:6px;}
+
+  .fab{position:fixed; right:calc(16px + max(0px, (100vw - 520px)/2)); bottom:calc(88px + env(safe-area-inset-bottom));
+    width:52px; height:52px; border-radius:50%; background:var(--navy); color:#fff; border:0; box-shadow:0 6px 16px rgba(15,27,46,0.35);
+    display:flex; align-items:center; justify-content:center; z-index:55;}
+
+  .stepper{display:flex; align-items:center; gap:12px; justify-content:center; margin:6px 0 4px;}
+  .stepper button{width:44px; height:44px; border-radius:12px; border:1px solid var(--line); background:var(--bg);
+    font-size:20px; font-weight:700; color:var(--ink); cursor:pointer;}
+  .stepper input{width:80px; text-align:center; font-size:20px; font-weight:800; border:0; background:none; font-family:inherit;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand"><span class="dot"></span>SELLER HUB</div>
+    <h1 class="page-title">재고관리</h1>
+    <div class="search-row">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="searchInput" placeholder="상품명으로 검색">
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="stock-summary">
+      <div class="stock-summary-card">
+        <div class="stock-summary-label">전체 상품</div>
+        <div class="stock-summary-value mono" id="totalProductCount">0개</div>
+      </div>
+      <div class="stock-summary-card">
+        <div class="stock-summary-label">재고 부족</div>
+        <div class="stock-summary-value warn mono" id="lowStockCount">0개</div>
+      </div>
+    </div>
+
+    <div id="productList"><div class="skeleton" style="height:74px; margin-bottom:9px;"></div><div class="skeleton" style="height:74px;"></div></div>
+  </main>
+
+  <button class="fab" id="addProductBtn" aria-label="상품 등록">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <div class="toast" id="toast"></div>
+
+  <nav class="bottom">
+    <div class="bottom-inner">
+      <a href="index.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        대시보드
+      </a>
+      <a href="orders.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
+        주문
+      </a>
+      <a href="inventory.html" class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        재고
+      </a>
+      <a href="profile.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
+        내정보
+      </a>
+    </div>
+  </nav>
+
+</div>
+
+<!-- 상품 등록 바텀시트 -->
+<div class="sheet-overlay" id="addOverlay"></div>
+<div class="sheet" id="addSheet">
+  <div class="sheet-handle"></div>
+  <h2>상품 등록</h2>
+  <div class="sheet-sub">등록하면 바로 재고관리 대상이 돼요</div>
+  <div class="field"><label>상품명 *</label><input type="text" id="pName" placeholder="예: 무선 이어폰 케이스"></div>
+  <div class="field"><label>SKU / 옵션코드</label><input type="text" id="pSku" placeholder="선택사항"></div>
+  <div class="field"><label>카테고리</label><select id="pCategory"><option value="미분류">미분류</option></select></div>
+  <div class="field"><label>초기 재고수량</label><input type="number" id="pStock" value="0" min="0"></div>
+  <div class="field"><label>안전재고 (이 이하면 부족 표시)</label><input type="number" id="pSafety" value="5" min="0"></div>
+  <div class="field"><label>판매가</label><input type="number" id="pPrice" placeholder="원"></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="addCancel">취소</button>
+    <button class="btn btn-primary" id="addSubmit">등록</button>
+  </div>
+</div>
+
+<!-- 재고 조정 바텀시트 -->
+<div class="sheet-overlay" id="adjustOverlay"></div>
+<div class="sheet" id="adjustSheet">
+  <div class="sheet-handle"></div>
+  <h2 id="adjustProductName">-</h2>
+  <div class="sheet-sub">현재 재고 <span id="adjustCurrentStock">0</span>개</div>
+  <div class="stepper">
+    <button id="adjustMinus">−</button>
+    <input type="number" id="adjustDelta" value="0">
+    <button id="adjustPlus">+</button>
+  </div>
+  <div class="field" style="margin-top:14px;"><label>사유</label><input type="text" id="adjustReason" placeholder="예: 실사 오차, 파손 등"></div>
+  <div class="field"><label>담당자</label><input type="text" id="adjustStaff" list="staffList" placeholder="이름 입력"></div>
+  <datalist id="staffList"></datalist>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="adjustCancel">취소</button>
+    <button class="btn btn-primary" id="adjustSubmit">반영</button>
+  </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+  let allProducts = [];
+  let activeProductId = null;
+
+  function openSheet(o, s) { document.getElementById(o).classList.add('show'); document.getElementById(s).classList.add('show'); }
+  function closeSheet(o, s) { document.getElementById(o).classList.remove('show'); document.getElementById(s).classList.remove('show'); }
+
+  async function loadProducts() {
+    const listEl = document.getElementById('productList');
+    try {
+      const products = await callApi('listProducts', {});
+      if (products.error) throw new Error(products.error);
+      allProducts = products;
+      renderProducts(products);
+    } catch (e) {
+      showToast('불러오기 실패: ' + e.message);
+    }
+  }
+
+  function renderProducts(products) {
+    const listEl = document.getElementById('productList');
+    document.getElementById('totalProductCount').textContent = products.length + '개';
+    const lowStock = products.filter(p => Number(p['현재재고']) <= Number(p['안전재고'] || 0));
+    document.getElementById('lowStockCount').textContent = lowStock.length + '개';
+
+    if (!products.length) {
+      listEl.innerHTML = `<div class="empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        <b>등록된 상품이 없어요</b>오른쪽 아래 + 버튼으로 첫 상품을 등록해보세요
+      </div>`;
+      return;
+    }
+
+    listEl.innerHTML = products.map(p => {
+      const stock = Number(p['현재재고']) || 0;
+      const safety = Number(p['안전재고']) || 0;
+      const isLow = stock <= safety;
+      return `<div class="product-card ${isLow ? 'low' : ''}" data-id="${p['상품ID']}">
+        <div class="product-top">
+          <div>
+            <div class="product-name">${p['상품명']}</div>
+            <div class="product-meta">${p['SKU'] ? 'SKU ' + p['SKU'] + ' · ' : ''}${p['카테고리ID'] || '미분류'}</div>
+            ${isLow ? '<span class="low-badge">재고 부족</span>' : ''}
+          </div>
+          <div class="product-stock">
+            <div class="product-stock-value mono">${stock}</div>
+            <div class="product-stock-unit">${p['단위'] || '개'}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    const q = e.target.value.trim();
+    const filtered = q ? allProducts.filter(p => (p['상품명'] || '').includes(q)) : allProducts;
+    renderProducts(filtered);
+  });
+
+  document.getElementById('productList').addEventListener('click', (e) => {
+    const card = e.target.closest('.product-card');
+    if (!card) return;
+    const p = allProducts.find(x => x['상품ID'] === card.dataset.id);
+    if (!p) return;
+    activeProductId = p['상품ID'];
+    document.getElementById('adjustProductName').textContent = p['상품명'];
+    document.getElementById('adjustCurrentStock').textContent = p['현재재고'] || 0;
+    document.getElementById('adjustDelta').value = 0;
+    document.getElementById('adjustReason').value = '';
+    openSheet('adjustOverlay', 'adjustSheet');
+  });
+
+  // 카테고리 목록 불러오기
+  (async function loadCategories() {
+    try {
+      const cats = await callApi('listCategories', {});
+      if (cats.error || !cats.length) return;
+      const sel = document.getElementById('pCategory');
+      sel.innerHTML = cats.map(c => `<option value="${c['카테고리명']}">${c['카테고리명']}</option>`).join('');
+    } catch (e) {}
+  })();
+
+  // 담당자 자동완성 목록
+  (async function loadStaffSuggestions() {
+    try {
+      const staff = await callApi('listStaff', {});
+      if (staff.error) return;
+      document.getElementById('staffList').innerHTML = staff.map(s => `<option value="${s['이름']}">`).join('');
+    } catch (e) {}
+  })();
+
+  document.getElementById('addProductBtn').addEventListener('click', () => openSheet('addOverlay', 'addSheet'));
+  document.getElementById('addCancel').addEventListener('click', () => closeSheet('addOverlay', 'addSheet'));
+  document.getElementById('addOverlay').addEventListener('click', () => closeSheet('addOverlay', 'addSheet'));
+
+  document.getElementById('addSubmit').addEventListener('click', async () => {
+    const name = document.getElementById('pName').value.trim();
+    if (!name) { showToast('상품명을 입력해주세요'); return; }
+    const btn = document.getElementById('addSubmit');
+    btn.disabled = true;
+    try {
+      const res = await callApi('createProduct', {
+        name,
+        sku: document.getElementById('pSku').value.trim(),
+        categoryId: document.getElementById('pCategory').value,
+        initialStock: document.getElementById('pStock').value,
+        safetyStock: document.getElementById('pSafety').value,
+        price: document.getElementById('pPrice').value
+      });
+      if (res.error) throw new Error(res.error);
+      showToast('상품이 등록됐어요');
+      closeSheet('addOverlay', 'addSheet');
+      document.getElementById('pName').value = '';
+      document.getElementById('pSku').value = '';
+      document.getElementById('pStock').value = 0;
+      loadProducts();
+    } catch (e) {
+      showToast('등록 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('adjustCancel').addEventListener('click', () => closeSheet('adjustOverlay', 'adjustSheet'));
+  document.getElementById('adjustOverlay').addEventListener('click', () => closeSheet('adjustOverlay', 'adjustSheet'));
+  document.getElementById('adjustMinus').addEventListener('click', () => {
+    const el = document.getElementById('adjustDelta');
+    el.value = Number(el.value) - 1;
+  });
+  document.getElementById('adjustPlus').addEventListener('click', () => {
+    const el = document.getElementById('adjustDelta');
+    el.value = Number(el.value) + 1;
+  });
+
+  document.getElementById('adjustSubmit').addEventListener('click', async () => {
+    const delta = Number(document.getElementById('adjustDelta').value);
+    const reason = document.getElementById('adjustReason').value.trim();
+    const staff = document.getElementById('adjustStaff').value.trim();
+    if (!delta) { showToast('조정할 수량을 입력해주세요'); return; }
+    if (!reason) { showToast('사유를 입력해주세요'); return; }
+    if (!staff) { showToast('담당자를 입력해주세요'); return; }
+
+    const btn = document.getElementById('adjustSubmit');
+    btn.disabled = true;
+    try {
+      const res = await callApi('adjustStockManual', { productId: activeProductId, delta, reason, staffId: staff });
+      if (res.error) throw new Error(res.error);
+      showToast('재고가 반영됐어요');
+      closeSheet('adjustOverlay', 'adjustSheet');
+      loadProducts();
+    } catch (e) {
+      showToast('처리 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  loadProducts();
+</script>
+</body>
+</html>
