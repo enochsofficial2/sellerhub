@@ -72,6 +72,7 @@
     <div class="filter-tabs" id="filterTabs">
       <button data-status="" class="active">전체</button>
       <button data-status="신규">신규</button>
+      <button data-status="보류">보류</button>
       <button data-status="송장출력완료">송장출력완료</button>
       <button data-status="발송완료">발송완료</button>
       <button data-status="반품접수">반품접수</button>
@@ -84,6 +85,10 @@
     <div class="bulk-print-bar" id="bulkPrintBar" style="display:none;">
       <div class="bulk-print-bar-text">신규 주문 <b id="bulkPrintCount">0</b>건 - 상품명순으로 한번에 출력</div>
       <button class="bulk-print-btn" id="bulkPrintBtn">전체 출력</button>
+    </div>
+    <div class="bulk-print-bar" id="bulkSendBar" style="display:none;">
+      <div class="bulk-print-bar-text">송장출력완료 <b id="bulkSendCount">0</b>건 - 채널로 한번에 전송</div>
+      <button class="bulk-print-btn" id="bulkSendBtn">일괄 전송</button>
     </div>
     <div id="orderList"><div class="skeleton" style="height:96px; margin-bottom:10px;"></div><div class="skeleton" style="height:96px;"></div></div>
   </main>
@@ -236,12 +241,22 @@
       if (data.error) throw new Error(data.error);
       currentOrders = data || [];
 
+      const newCount = currentOrders.filter(o => (o['주문상태'] || '신규') === '신규').length;
       const bulkBar = document.getElementById('bulkPrintBar');
-      if (status === '신규' && currentOrders.length) {
+      if (newCount > 0) {
         bulkBar.style.display = 'flex';
-        document.getElementById('bulkPrintCount').textContent = currentOrders.length;
+        document.getElementById('bulkPrintCount').textContent = newCount;
       } else {
         bulkBar.style.display = 'none';
+      }
+
+      const issuedCount = currentOrders.filter(o => o['주문상태'] === '송장출력완료').length;
+      const bulkSendBar = document.getElementById('bulkSendBar');
+      if (issuedCount > 0) {
+        bulkSendBar.style.display = 'flex';
+        document.getElementById('bulkSendCount').textContent = issuedCount;
+      } else {
+        bulkSendBar.style.display = 'none';
       }
 
       if (!currentOrders.length) {
@@ -322,6 +337,31 @@
     loadOrders(currentStatus);
   });
 
+  document.getElementById('bulkSendBtn').addEventListener('click', async () => {
+    const targets = currentOrders.filter(o => o['주문상태'] === '송장출력완료');
+    if (!targets.length) { showToast('전송할 주문이 없어요'); return; }
+
+    const btn = document.getElementById('bulkSendBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+
+    let successCount = 0, failCount = 0;
+    for (const o of targets) {
+      try {
+        const res = await callApi('sendInvoiceToChannel', { orderId: o['주문ID'] });
+        if (res.error) throw new Error(res.error);
+        successCount++;
+      } catch (e) {
+        failCount++;
+      }
+    }
+
+    btn.disabled = false;
+    btn.textContent = '일괄 전송';
+    showToast(successCount + '건 전송 완료' + (failCount ? ` (${failCount}건 실패)` : ''));
+    loadOrders(currentStatus);
+  });
+
   document.querySelectorAll('[data-soon]').forEach(el => {
     el.addEventListener('click', () => showToast('다음 단계에서 만들 예정이에요'));
   });
@@ -394,6 +434,10 @@
     }
     if (o['주문상태'] === '신규') {
       actionHtml += `<button class="btn btn-danger" id="btnGoCancel">취소 처리</button>`;
+      actionHtml += `<button class="btn btn-ghost" id="btnHold">보류 처리</button>`;
+    }
+    if (o['주문상태'] === '보류') {
+      actionHtml += `<button class="btn btn-primary" id="btnReleaseHold">보류 해제</button>`;
     }
     if (o['주문상태'] === '발송완료') {
       actionHtml += `<button class="btn btn-danger" id="btnGoReturn">반품 접수</button>`;
@@ -419,6 +463,39 @@
     if (cancelBtn) cancelBtn.addEventListener('click', () => {
       closeSheet('sheetOverlay', 'detailSheet');
       setTimeout(() => openSheet('cancelOverlay', 'cancelSheet'), 200);
+    });
+
+    const holdBtn = document.getElementById('btnHold');
+    if (holdBtn) holdBtn.addEventListener('click', async () => {
+      const reason = prompt('보류 사유를 입력해주세요 (선택)') || '';
+      holdBtn.disabled = true;
+      try {
+        const res = await callApi('holdOrder', { orderId: activeOrderId, reason });
+        if (res.error) throw new Error(res.error);
+        showToast('보류 처리했어요');
+        closeSheet('sheetOverlay', 'detailSheet');
+        loadOrders(currentStatus);
+      } catch (e) {
+        showToast('처리 실패: ' + e.message);
+      } finally {
+        holdBtn.disabled = false;
+      }
+    });
+
+    const releaseHoldBtn = document.getElementById('btnReleaseHold');
+    if (releaseHoldBtn) releaseHoldBtn.addEventListener('click', async () => {
+      releaseHoldBtn.disabled = true;
+      try {
+        const res = await callApi('releaseHold', { orderId: activeOrderId });
+        if (res.error) throw new Error(res.error);
+        showToast('보류 해제했어요 - 다시 신규 상태예요');
+        closeSheet('sheetOverlay', 'detailSheet');
+        loadOrders(currentStatus);
+      } catch (e) {
+        showToast('처리 실패: ' + e.message);
+      } finally {
+        releaseHoldBtn.disabled = false;
+      }
     });
 
     const completeReturnBtn = document.getElementById('btnCompleteReturn');
