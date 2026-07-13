@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>송장 출력 - 셀러허브</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --navy:#0F1B2E; --ink:#12192B; --ink-mute:#5C6478; --line:#DCE1E9; --amber:#E8A33D; }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Pretendard', sans-serif; background:#EEF1F5; color:var(--ink); padding:16px;}
+  .toolbar{max-width:400px; margin:0 auto 14px; display:flex; gap:8px;}
+  .toolbar button{flex:1; border:0; border-radius:10px; padding:12px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;}
+  .btn-print{background:var(--navy); color:#fff;}
+  .btn-back{background:#fff; color:var(--ink); border:1px solid var(--line) !important;}
+
+  .label{max-width:400px; margin:0 auto; background:#fff; border:2px solid var(--navy); border-radius:12px; padding:20px; }
+  .label-header{display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--navy); padding-bottom:10px; margin-bottom:14px;}
+  .label-brand{font-size:13px; font-weight:800; letter-spacing:0.05em;}
+  .label-channel{font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px; background:var(--amber); color:#fff;}
+
+  .label-section{margin-bottom:14px;}
+  .label-section-title{font-size:10.5px; color:var(--ink-mute); font-weight:700; margin-bottom:4px; letter-spacing:0.05em;}
+  .label-name{font-size:17px; font-weight:800;}
+  .label-detail{font-size:13px; color:var(--ink); margin-top:2px; line-height:1.5;}
+
+  .label-divider{border-top:1px dashed var(--line); margin:14px 0;}
+
+  .label-product{font-size:14px; font-weight:700;}
+  .label-product-meta{font-size:12px; color:var(--ink-mute); margin-top:2px;}
+
+  .label-invoice{background:#F5F3EE; border-radius:10px; padding:12px 14px; margin-top:6px;}
+  .label-invoice-row{display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0;}
+  .label-invoice-row span:first-child{color:var(--ink-mute);}
+  .label-invoice-row span:last-child{font-weight:800; font-family:'IBM Plex Mono', monospace;}
+
+  .loading, .error-box{max-width:400px; margin:40px auto; text-align:center; color:var(--ink-mute); font-size:13px;}
+
+  @media print {
+    body{background:#fff; padding:0;}
+    .toolbar{display:none;}
+    .label{border:1.5px solid #000; box-shadow:none; page-break-inside:avoid;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button class="btn-back" onclick="window.close ? window.close() : history.back()">닫기</button>
+  <button class="btn-print" onclick="window.print()">🖨 인쇄하기</button>
+</div>
+
+<div id="content" class="loading">불러오는 중...</div>
+
+<script src="common.js"></script>
+<script>
+  function getParam(name) {
+    return new URLSearchParams(window.location.search).get(name);
+  }
+
+  async function render() {
+    const orderId = getParam('orderId');
+    const contentEl = document.getElementById('content');
+    if (!orderId) { contentEl.innerHTML = '<div class="error-box">주문 정보가 없어요</div>'; return; }
+
+    try {
+      const [order, store] = await Promise.all([
+        callApi('getOrderDetail', { orderId }),
+        callApi('getStoreInfo', {})
+      ]);
+      if (order.error) throw new Error(order.error);
+
+      contentEl.className = '';
+      contentEl.innerHTML = `
+        <div class="label">
+          <div class="label-header">
+            <div class="label-brand">SELLER HUB 송장</div>
+            <div class="label-channel">${order['판매채널'] || '기타'}</div>
+          </div>
+
+          <div class="label-section">
+            <div class="label-section-title">받는사람</div>
+            <div class="label-name">${order['구매자명'] || '-'}</div>
+            <div class="label-detail">${order['구매자연락처'] || '-'}</div>
+            <div class="label-detail">${order['구매자주소'] || '-'}</div>
+          </div>
+
+          <div class="label-divider"></div>
+
+          <div class="label-section">
+            <div class="label-section-title">보내는사람</div>
+            <div class="label-name">${store.name || '(내정보에서 출고지 정보를 설정해주세요)'}</div>
+            <div class="label-detail">${store.phone || ''}</div>
+            <div class="label-detail">${store.address || ''}</div>
+          </div>
+
+          <div class="label-divider"></div>
+
+          <div class="label-section">
+            <div class="label-section-title">상품정보</div>
+            <div class="label-product">${order['상품명'] || '-'}</div>
+            <div class="label-product-meta">수량 ${order['수량'] || 0}개 · 주문번호 ${order['채널주문번호'] || '-'}</div>
+          </div>
+
+          <div class="label-invoice">
+            <div class="label-invoice-row"><span>택배사</span><span>${order['송장_택배사'] || '-'}</span></div>
+            <div class="label-invoice-row"><span>송장번호</span><span>${order['송장_송장번호'] || '-'}</span></div>
+          </div>
+        </div>
+      `;
+    } catch (e) {
+      contentEl.className = 'error-box';
+      contentEl.innerHTML = '불러오기 실패: ' + e.message;
+    }
+  }
+
+  render();
+</script>
+</body>
+</html>
