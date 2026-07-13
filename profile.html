@@ -12,16 +12,9 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-  .staff-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 16px;
-    margin-bottom:9px; display:flex; align-items:center; gap:12px;}
-  .staff-avatar{width:38px; height:38px; border-radius:50%; background:var(--navy); color:var(--amber);
-    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0;}
-  .staff-name{font-size:14.5px; font-weight:700;}
-  .staff-role{font-size:12px; color:var(--ink-mute); margin-top:2px;}
-
-  .add-staff-card{background:var(--surface); border:1px dashed var(--line); border-radius:14px; padding:14px 16px;
-    margin-bottom:16px; display:flex; align-items:center; gap:10px; cursor:pointer; color:var(--ink-mute); font-size:13.5px; font-weight:600;}
-  .add-staff-card svg{color:var(--amber); flex-shrink:0;}
+  .edit-info-card{background:var(--surface); border:1px dashed var(--line); border-radius:14px; padding:14px 16px;
+    margin-top:8px; display:flex; align-items:center; gap:10px; cursor:pointer; color:var(--ink-mute); font-size:13.5px; font-weight:600;}
+  .edit-info-card svg{color:var(--amber); flex-shrink:0;}
 
   .app-info{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:20px;}
   .app-info-row{display:flex; justify-content:space-between; padding:8px 0; font-size:13px;}
@@ -44,17 +37,10 @@
       <div class="app-info-row"><span>연락처</span><span id="viewStorePhone">-</span></div>
       <div class="app-info-row"><span>주소</span><span id="viewStoreAddress">-</span></div>
     </div>
-    <div class="add-staff-card" id="editStoreBtn" style="margin-top:8px;">
+    <div class="edit-info-card" id="editStoreBtn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
       출고지 정보 수정
     </div>
-
-    <div class="section-title">담당자 관리</div>
-    <div class="add-staff-card" id="addStaffCard">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      새 담당자 등록
-    </div>
-    <div id="staffList"><div class="skeleton" style="height:60px; margin-bottom:9px;"></div></div>
 
     <div class="app-info">
       <div class="app-info-row"><span>연동 저장소</span><span>enochsofficial2/sellerhub</span></div>
@@ -78,7 +64,7 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
         재고
       </a>
-            <a href="insights.html" class="nav-item">
+      <a href="insights.html" class="nav-item">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
         종합
       </a>
@@ -102,24 +88,6 @@
   <div class="btn-row">
     <button class="btn btn-ghost" id="storeCancel">취소</button>
     <button class="btn btn-primary" id="storeSubmit">저장</button>
-  </div>
-</div>
-
-<div class="sheet-overlay" id="staffOverlay"></div>
-<div class="sheet" id="staffSheet">
-  <div class="sheet-handle"></div>
-  <h2>새 담당자 등록</h2>
-  <div class="sheet-sub">등록하면 주문/재고 처리 시 담당자로 선택할 수 있어요</div>
-  <div class="field"><label>이름 *</label><input type="text" id="staffName" placeholder="이름 입력"></div>
-  <div class="field">
-    <label>역할</label>
-    <select id="staffRole">
-      <option>대표</option><option>직원</option><option>알바</option><option>기타</option>
-    </select>
-  </div>
-  <div class="btn-row">
-    <button class="btn btn-ghost" id="staffCancel">취소</button>
-    <button class="btn btn-primary" id="staffSubmit">등록</button>
   </div>
 </div>
 
@@ -165,58 +133,7 @@
     }
   });
 
-  async function loadStaff() {
-    const listEl = document.getElementById('staffList');
-    try {
-      const staff = await callApi('listStaff', {});
-      if (staff.error) throw new Error(staff.error);
-
-      if (!staff.length) {
-        listEl.innerHTML = `<div class="empty">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
-          <b>등록된 담당자가 없어요</b>위 버튼으로 첫 담당자를 등록해보세요
-        </div>`;
-        return;
-      }
-
-      listEl.innerHTML = staff.map(s => `<div class="staff-card">
-        <div class="staff-avatar">${(s['이름'] || '?').charAt(0)}</div>
-        <div>
-          <div class="staff-name">${s['이름']}</div>
-          <div class="staff-role">${s['역할'] || '직원'}</div>
-        </div>
-      </div>`).join('');
-    } catch (e) {
-      showToast('불러오기 실패: ' + e.message);
-    }
-  }
-
-  document.getElementById('addStaffCard').addEventListener('click', () => openSheet('staffOverlay', 'staffSheet'));
-  document.getElementById('staffCancel').addEventListener('click', () => closeSheet('staffOverlay', 'staffSheet'));
-  document.getElementById('staffOverlay').addEventListener('click', () => closeSheet('staffOverlay', 'staffSheet'));
-
-  document.getElementById('staffSubmit').addEventListener('click', async () => {
-    const name = document.getElementById('staffName').value.trim();
-    if (!name) { showToast('이름을 입력해주세요'); return; }
-    const btn = document.getElementById('staffSubmit');
-    btn.disabled = true;
-    try {
-      const res = await callApi('addStaff', { name, role: document.getElementById('staffRole').value });
-      if (res.error) throw new Error(res.error);
-      showToast('담당자가 등록됐어요');
-      closeSheet('staffOverlay', 'staffSheet');
-      document.getElementById('staffName').value = '';
-      loadStaff();
-    } catch (e) {
-      showToast('등록 실패: ' + e.message);
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
   loadStoreInfo();
-
-  loadStaff();
 </script>
 </body>
 </html>
