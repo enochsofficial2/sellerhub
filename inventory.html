@@ -43,6 +43,12 @@
   .stepper button{width:44px; height:44px; border-radius:12px; border:1px solid var(--line); background:var(--bg);
     font-size:20px; font-weight:700; color:var(--ink); cursor:pointer;}
   .stepper input{width:80px; text-align:center; font-size:20px; font-weight:800; border:0; background:none; font-family:inherit;}
+
+  @media (min-width: 900px) {
+    .stock-summary{grid-template-columns:repeat(4,1fr);}
+    #productList{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:9px; align-items:start;}
+    #productList .product-card{margin-bottom:0;}
+  }
 </style>
 </head>
 <body>
