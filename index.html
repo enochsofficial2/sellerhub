@@ -56,9 +56,19 @@
   .cat-bar-track{height:7px; border-radius:999px; background:var(--bg); overflow:hidden;}
   .cat-bar-fill{height:100%; border-radius:999px; background:linear-gradient(90deg, var(--amber), #F0BC6A);}
 
-  .empty{background:var(--surface); border:1px dashed var(--line); border-radius:16px; padding:36px 20px; text-align:center; color:var(--ink-mute); font-size:12.5px;}
-  .empty svg{margin-bottom:12px; color:var(--line);}
-  .empty b{display:block; color:var(--ink); font-size:14.5px; margin-bottom:5px; font-weight:800;}
+  .pipeline-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px 18px 16px; margin-bottom:16px;}
+  .pipeline-title{font-size:13px; font-weight:800; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;}
+  .pipeline-title a{font-size:12px; color:var(--ink-mute); font-weight:600; text-decoration:none;}
+  .pipeline-row{display:flex; align-items:center; gap:12px; padding:9px 0; position:relative;}
+  .pipeline-row:not(:last-child)::after{content:""; position:absolute; left:5px; top:28px; bottom:-9px; width:1.5px; background:var(--line);}
+  .pipeline-dot{width:11px; height:11px; border-radius:50%; background:var(--line); flex-shrink:0; position:relative; z-index:1;}
+  .pipeline-row.has-count .pipeline-dot{background:var(--amber);}
+  .pipeline-row.warn .pipeline-dot{background:var(--danger);}
+  .pipeline-label{flex:1; font-size:13.5px; font-weight:600; color:var(--ink-mute);}
+  .pipeline-row.has-count .pipeline-label{color:var(--ink);}
+  .pipeline-row.warn .pipeline-label{color:var(--danger);}
+  .pipeline-count{font-size:15px; font-weight:800;}
+  .pipeline-row.warn .pipeline-count{color:var(--danger);}
 
 
   .refresh-btn{position:fixed; right:calc(16px + max(0px, (100vw - 520px)/2)); bottom:calc(88px + env(safe-area-inset-bottom));
@@ -127,6 +137,18 @@
           <div class="hero-stat-label">평균 주문가</div>
           <div class="hero-stat-value mono" id="heroAvg">0원</div>
         </div>
+      </div>
+    </div>
+
+    <div class="pipeline-card">
+      <div class="pipeline-title">
+        <span>주문 처리 현황</span>
+        <a href="orders.html">전체보기 →</a>
+      </div>
+      <div id="pipelineBody">
+        <div class="skeleton" style="height:18px; margin-bottom:16px;"></div>
+        <div class="skeleton" style="height:18px; margin-bottom:16px;"></div>
+        <div class="skeleton" style="height:18px;"></div>
       </div>
     </div>
 
@@ -258,6 +280,40 @@
     }
   }
   loadTodo();
+
+  async function loadPipeline() {
+    const body = document.getElementById('pipelineBody');
+    try {
+      const orders = await callApi('listOrders', {});
+      if (orders.error) throw new Error(orders.error);
+
+      const counts = { '신규': 0, '발송완료': 0, '반품접수': 0, '취소': 0 };
+      orders.forEach(o => {
+        const s = o['주문상태'] || '신규';
+        if (counts[s] !== undefined) counts[s]++;
+      });
+
+      const rows = [
+        { key: '신규', label: '송장 대기', warn: false },
+        { key: '발송완료', label: '발송완료', warn: false },
+        { key: '반품접수', label: '반품접수', warn: true },
+        { key: '취소', label: '취소', warn: true }
+      ];
+
+      body.innerHTML = rows.map(r => {
+        const n = counts[r.key];
+        const cls = 'pipeline-row' + (n > 0 ? (r.warn ? ' warn' : ' has-count') : '');
+        return `<div class="${cls}">
+          <span class="pipeline-dot"></span>
+          <span class="pipeline-label">${r.label}</span>
+          <span class="pipeline-count mono">${formatWon(n)}건</span>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      body.innerHTML = '<div style="font-size:12px; color:var(--ink-mute); text-align:center; padding:8px 0;">불러오지 못했어요</div>';
+    }
+  }
+  loadPipeline();
 
   document.querySelectorAll('[data-soon]').forEach(el => {
     el.addEventListener('click', () => showToast('다음 단계에서 만들 예정이에요'));
