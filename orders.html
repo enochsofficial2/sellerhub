@@ -27,6 +27,13 @@
   .order-bottom{display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
   .order-amount{font-size:15px; font-weight:700;}
   .order-staff{font-size:12px; color:var(--ink-mute);}
+  .quick-ship-btn{background:var(--navy); color:#fff; border:0; border-radius:8px; padding:8px 14px; font-size:12px;
+    font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap;}
+  .quick-ship-btn:active{opacity:0.85;}
+
+  .active-filter-banner{background:var(--amber-soft); color:#8a5c14; font-size:12px; font-weight:600;
+    padding:9px 14px; border-radius:10px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;}
+  .active-filter-banner button{border:0; background:none; color:#8a5c14; font-size:12px; text-decoration:underline; font-family:inherit; cursor:pointer;}
 
   .refresh-btn{position:fixed; right:calc(16px + max(0px, (100vw - 520px)/2)); bottom:calc(88px + env(safe-area-inset-bottom));
     width:46px; height:46px; border-radius:50%; background:var(--navy); color:#fff; border:0; box-shadow:0 4px 14px rgba(15,27,46,0.3);
@@ -183,7 +190,9 @@
           </div>
           <div class="order-bottom">
             <span class="order-amount mono">${formatWon(o['판매가'])}원</span>
-            <span class="order-staff">${o['담당자ID'] ? '담당 ' + o['담당자ID'] : '담당자 미지정'}</span>
+            ${o['주문상태'] === '신규'
+              ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">바로 송장등록</button>`
+              : `<span class="order-staff">${o['담당자ID'] ? '담당 ' + o['담당자ID'] : '담당자 미지정'}</span>`}
           </div>
         </div>`;
       }).join('');
@@ -221,6 +230,14 @@
   }
 
   document.getElementById('orderList').addEventListener('click', (e) => {
+    // 빠른 송장등록 버튼을 눌렀으면 상세 팝업을 열지 않고 바로 송장 폼으로
+    const quickBtn = e.target.closest('[data-quick-ship]');
+    if (quickBtn) {
+      activeOrderId = quickBtn.dataset.quickShip;
+      openSheet('shipOverlay', 'shipSheet');
+      return;
+    }
+
     const card = e.target.closest('.order-card');
     if (!card) return;
     const orderId = card.dataset.orderId;
@@ -229,6 +246,20 @@
     activeOrderId = orderId;
     showDetail(order);
   });
+
+  // 대시보드에서 ?status=신규 같은 링크로 들어온 경우 자동으로 해당 탭 선택
+  (function applyUrlFilter() {
+    const params = new URLSearchParams(window.location.search);
+    const statusParam = params.get('status');
+    if (statusParam) {
+      const btn = document.querySelector('#filterTabs button[data-status="' + statusParam + '"]');
+      if (btn) {
+        document.querySelectorAll('#filterTabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStatus = statusParam;
+      }
+    }
+  })();
 
   function showDetail(o) {
     document.getElementById('detailProduct').textContent = o['상품명'] || '-';
