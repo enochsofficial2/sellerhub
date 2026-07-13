@@ -35,6 +35,10 @@
     padding:9px 14px; border-radius:10px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;}
   .active-filter-banner button{border:0; background:none; color:#8a5c14; font-size:12px; text-decoration:underline; font-family:inherit; cursor:pointer;}
 
+  .fab{position:fixed; right:calc(16px + max(0px, (100vw - 520px)/2)); bottom:calc(150px + env(safe-area-inset-bottom));
+    width:52px; height:52px; border-radius:50%; background:var(--navy); color:#fff; border:0; box-shadow:0 6px 16px rgba(15,27,46,0.35);
+    display:flex; align-items:center; justify-content:center; z-index:55;}
+
   .refresh-btn{position:fixed; right:calc(16px + max(0px, (100vw - 520px)/2)); bottom:calc(88px + env(safe-area-inset-bottom));
     width:46px; height:46px; border-radius:50%; background:var(--navy); color:#fff; border:0; box-shadow:0 4px 14px rgba(15,27,46,0.3);
     display:flex; align-items:center; justify-content:center; font-size:18px; z-index:55;}
@@ -64,6 +68,10 @@
   <main>
     <div id="orderList"><div class="skeleton" style="height:96px; margin-bottom:10px;"></div><div class="skeleton" style="height:96px;"></div></div>
   </main>
+
+  <button class="fab" id="addOrderBtn" aria-label="주문 직접 등록">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
 
   <button class="refresh-btn" id="refreshBtn" aria-label="새로고침">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
@@ -151,6 +159,34 @@
   <div class="btn-row">
     <button class="btn btn-ghost" id="returnCancel">취소</button>
     <button class="btn btn-danger" id="returnSubmit">반품 접수</button>
+  </div>
+</div>
+
+<!-- 주문 직접 등록 바텀시트 -->
+<div class="sheet-overlay" id="addOrderOverlay"></div>
+<div class="sheet" id="addOrderSheet">
+  <div class="sheet-handle"></div>
+  <h2>주문 직접 등록</h2>
+  <div class="sheet-sub">전화주문, 직접판매 등록, 또는 API 연동 전 테스트용이에요</div>
+  <div class="field">
+    <label>판매채널</label>
+    <select id="oChannel">
+      <option>직접판매</option><option>쿠팡</option><option>네이버</option><option>기타</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>상품 *</label>
+    <select id="oProduct"><option value="">상품을 먼저 재고관리에서 등록해주세요</option></select>
+  </div>
+  <div class="field"><label>수량 *</label><input type="number" id="oQty" value="1" min="1"></div>
+  <div class="field"><label>판매가 (비우면 상품 기본가 적용)</label><input type="number" id="oPrice" placeholder="원"></div>
+  <div class="field"><label>구매자명</label><input type="text" id="oBuyerName" placeholder="선택사항"></div>
+  <div class="field"><label>연락처</label><input type="text" id="oBuyerPhone" placeholder="선택사항"></div>
+  <div class="field"><label>주소</label><input type="text" id="oBuyerAddress" placeholder="선택사항"></div>
+  <div class="field"><label>담당자</label><input type="text" id="oStaff" list="staffList" placeholder="이름 입력"></div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="addOrderCancel">취소</button>
+    <button class="btn btn-primary" id="addOrderSubmit">등록</button>
   </div>
 </div>
 
@@ -367,6 +403,61 @@
       document.getElementById('staffList').innerHTML = staff.map(s => `<option value="${s['이름']}">`).join('');
     } catch (e) {}
   })();
+
+  let allProductsForOrder = [];
+  async function loadProductsForOrderForm() {
+    try {
+      const products = await callApi('listProducts', {});
+      if (products.error) return;
+      allProductsForOrder = products;
+      const sel = document.getElementById('oProduct');
+      if (!products.length) {
+        sel.innerHTML = '<option value="">상품을 먼저 재고관리에서 등록해주세요</option>';
+        return;
+      }
+      sel.innerHTML = products.map(p => `<option value="${p['상품ID']}">${p['상품명']} (재고 ${p['현재재고']})</option>`).join('');
+    } catch (e) {}
+  }
+
+  document.getElementById('addOrderBtn').addEventListener('click', () => {
+    loadProductsForOrderForm();
+    openSheet('addOrderOverlay', 'addOrderSheet');
+  });
+  document.getElementById('addOrderCancel').addEventListener('click', () => closeSheet('addOrderOverlay', 'addOrderSheet'));
+  document.getElementById('addOrderOverlay').addEventListener('click', () => closeSheet('addOrderOverlay', 'addOrderSheet'));
+
+  document.getElementById('addOrderSubmit').addEventListener('click', async () => {
+    const productId = document.getElementById('oProduct').value;
+    const qty = document.getElementById('oQty').value;
+    const staff = document.getElementById('oStaff').value.trim();
+    if (!productId) { showToast('상품을 선택해주세요'); return; }
+    if (!qty || Number(qty) < 1) { showToast('수량을 확인해주세요'); return; }
+    if (!staff) { showToast('담당자를 입력해주세요'); return; }
+
+    const btn = document.getElementById('addOrderSubmit');
+    btn.disabled = true;
+    try {
+      const res = await callApi('createOrderManual', {
+        channel: document.getElementById('oChannel').value,
+        productId, quantity: qty,
+        price: document.getElementById('oPrice').value,
+        buyerName: document.getElementById('oBuyerName').value.trim(),
+        buyerPhone: document.getElementById('oBuyerPhone').value.trim(),
+        buyerAddress: document.getElementById('oBuyerAddress').value.trim(),
+        staffId: staff
+      });
+      if (res.error) throw new Error(res.error);
+      showToast('주문이 등록됐어요');
+      closeSheet('addOrderOverlay', 'addOrderSheet');
+      ['oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oPrice'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('oQty').value = 1;
+      loadOrders(currentStatus);
+    } catch (e) {
+      showToast('등록 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 </script>
 </body>
 </html>
