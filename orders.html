@@ -35,6 +35,14 @@
     padding:9px 14px; border-radius:10px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;}
   .active-filter-banner button{border:0; background:none; color:#8a5c14; font-size:12px; text-decoration:underline; font-family:inherit; cursor:pointer;}
 
+  .bulk-print-bar{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .bulk-print-bar-text{font-size:12.5px; color:var(--ink-mute);}
+  .bulk-print-bar-text b{color:var(--ink); font-weight:800;}
+  .bulk-print-btn{background:var(--navy); color:#fff; border:0; border-radius:9px; padding:9px 14px;
+    font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap;}
+  .bulk-print-btn:disabled{opacity:0.5;}
+
   .fab{position:fixed; right:calc(16px + max(0px, (100vw - 520px)/2)); bottom:calc(150px + env(safe-area-inset-bottom));
     width:52px; height:52px; border-radius:50%; background:var(--navy); color:#fff; border:0; box-shadow:0 6px 16px rgba(15,27,46,0.35);
     display:flex; align-items:center; justify-content:center; z-index:55;}
@@ -73,6 +81,10 @@
   </header>
 
   <main>
+    <div class="bulk-print-bar" id="bulkPrintBar" style="display:none;">
+      <div class="bulk-print-bar-text">신규 주문 <b id="bulkPrintCount">0</b>건 - 상품명순으로 한번에 출력</div>
+      <button class="bulk-print-btn" id="bulkPrintBtn">전체 출력</button>
+    </div>
     <div id="orderList"><div class="skeleton" style="height:96px; margin-bottom:10px;"></div><div class="skeleton" style="height:96px;"></div></div>
   </main>
 
@@ -241,6 +253,14 @@
       if (data.error) throw new Error(data.error);
       currentOrders = data || [];
 
+      const bulkBar = document.getElementById('bulkPrintBar');
+      if (status === '신규' && currentOrders.length) {
+        bulkBar.style.display = 'flex';
+        document.getElementById('bulkPrintCount').textContent = currentOrders.length;
+      } else {
+        bulkBar.style.display = 'none';
+      }
+
       if (!currentOrders.length) {
         listEl.innerHTML = `<div class="empty">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
@@ -289,6 +309,38 @@
   });
 
   document.getElementById('refreshBtn').addEventListener('click', () => loadOrders(currentStatus));
+
+  document.getElementById('bulkPrintBtn').addEventListener('click', async () => {
+    const staff = prompt('담당자 이름을 입력해주세요');
+    if (!staff) return;
+
+    const targets = currentOrders.filter(o => o['주문상태'] === '신규');
+    if (!targets.length) { showToast('출력할 신규 주문이 없어요'); return; }
+
+    const btn = document.getElementById('bulkPrintBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+
+    const issuedIds = [];
+    let failCount = 0;
+    for (const o of targets) {
+      try {
+        const res = await callApi('issueInvoice', { orderId: o['주문ID'], staffId: staff });
+        if (res.error) throw new Error(res.error);
+        issuedIds.push(o['주문ID']);
+      } catch (e) {
+        failCount++;
+      }
+    }
+
+    btn.disabled = false;
+    btn.textContent = '전체 출력';
+
+    if (!issuedIds.length) { showToast('발급에 실패했어요'); return; }
+    showToast(issuedIds.length + '건 발급 완료' + (failCount ? ` (${failCount}건 실패)` : ''));
+    window.open('print.html?orderIds=' + encodeURIComponent(issuedIds.join(',')), '_blank');
+    loadOrders(currentStatus);
+  });
 
   document.querySelectorAll('[data-soon]').forEach(el => {
     el.addEventListener('click', () => showToast('다음 단계에서 만들 예정이에요'));
