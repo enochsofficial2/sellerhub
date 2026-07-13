@@ -61,6 +61,7 @@
       <button data-status="신규">신규</button>
       <button data-status="발송완료">발송완료</button>
       <button data-status="반품접수">반품접수</button>
+      <button data-status="반품완료">반품완료</button>
       <button data-status="취소">취소</button>
     </div>
   </header>
@@ -191,6 +192,26 @@
   <div class="btn-row">
     <button class="btn btn-ghost" id="addOrderCancel">취소</button>
     <button class="btn btn-primary" id="addOrderSubmit">등록</button>
+  </div>
+</div>
+
+<!-- 취소 처리 폼 바텀시트 -->
+<div class="sheet-overlay" id="cancelOverlay"></div>
+<div class="sheet" id="cancelSheet">
+  <div class="sheet-handle"></div>
+  <h2>취소 처리</h2>
+  <div class="sheet-sub">발송 전 주문 취소예요. 재고는 아직 차감 전이라 복원할 필요 없어요</div>
+  <div class="field">
+    <label>취소 사유</label>
+    <textarea id="cancelReason" placeholder="예: 고객 단순변심, 품절 등"></textarea>
+  </div>
+  <div class="field">
+    <label>담당자</label>
+    <input type="text" id="cancelStaff" list="staffList" placeholder="처리한 사람 이름">
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" id="cancelCancel">취소</button>
+    <button class="btn btn-danger" id="cancelSubmit">취소 확정</button>
   </div>
 </div>
 
@@ -326,8 +347,14 @@
     if (o['주문상태'] === '발송완료') {
       actionHtml += `<button class="btn btn-ghost" id="btnPrintLabel">송장 출력</button>`;
     }
-    if (o['주문상태'] !== '반품접수' && o['주문상태'] !== '취소') {
+    if (o['주문상태'] === '신규') {
+      actionHtml += `<button class="btn btn-danger" id="btnGoCancel">취소 처리</button>`;
+    }
+    if (o['주문상태'] === '발송완료') {
       actionHtml += `<button class="btn btn-danger" id="btnGoReturn">반품 접수</button>`;
+    }
+    if (o['주문상태'] === '반품접수') {
+      actionHtml += `<button class="btn btn-primary" id="btnCompleteReturn">반품완료 처리(재입고)</button>`;
     }
     actionHtml += '</div>';
     actions.innerHTML = actionHtml;
@@ -335,6 +362,28 @@
     const printBtn = document.getElementById('btnPrintLabel');
     if (printBtn) printBtn.addEventListener('click', () => {
       window.open('print.html?orderId=' + encodeURIComponent(o['주문ID']), '_blank');
+    });
+
+    const cancelBtn = document.getElementById('btnGoCancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => {
+      closeSheet('sheetOverlay', 'detailSheet');
+      setTimeout(() => openSheet('cancelOverlay', 'cancelSheet'), 200);
+    });
+
+    const completeReturnBtn = document.getElementById('btnCompleteReturn');
+    if (completeReturnBtn) completeReturnBtn.addEventListener('click', async () => {
+      completeReturnBtn.disabled = true;
+      try {
+        const res = await callApi('completeReturn', { orderId: activeOrderId, staffId: document.getElementById('returnStaff').value.trim() || '미지정' });
+        if (res.error) throw new Error(res.error);
+        showToast('반품완료 처리됐어요 - 재고가 복원됐어요');
+        closeSheet('sheetOverlay', 'detailSheet');
+        loadOrders(currentStatus);
+      } catch (e) {
+        showToast('처리 실패: ' + e.message);
+      } finally {
+        completeReturnBtn.disabled = false;
+      }
     });
 
     const goShip = document.getElementById('btnGoShip');
@@ -407,6 +456,32 @@
       closeSheet('returnOverlay', 'returnSheet');
       document.getElementById('returnReason').value = '';
       document.getElementById('returnStaff').value = '';
+      loadOrders(currentStatus);
+    } catch (e) {
+      showToast('처리 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // 취소 처리
+  document.getElementById('cancelOverlay').addEventListener('click', () => closeSheet('cancelOverlay', 'cancelSheet'));
+  document.getElementById('cancelCancel').addEventListener('click', () => closeSheet('cancelOverlay', 'cancelSheet'));
+  document.getElementById('cancelSubmit').addEventListener('click', async () => {
+    const reason = document.getElementById('cancelReason').value.trim();
+    const staff = document.getElementById('cancelStaff').value.trim();
+    if (!reason) { showToast('취소 사유를 입력해주세요'); return; }
+    if (!staff) { showToast('담당자를 입력해주세요'); return; }
+
+    const btn = document.getElementById('cancelSubmit');
+    btn.disabled = true;
+    try {
+      const res = await callApi('cancelOrder', { orderId: activeOrderId, reason, staffId: staff });
+      if (res.error) throw new Error(res.error);
+      showToast('취소 처리됐어요');
+      closeSheet('cancelOverlay', 'cancelSheet');
+      document.getElementById('cancelReason').value = '';
+      document.getElementById('cancelStaff').value = '';
       loadOrders(currentStatus);
     } catch (e) {
       showToast('처리 실패: ' + e.message);
