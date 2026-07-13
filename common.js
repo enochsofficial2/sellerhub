@@ -1,7 +1,7 @@
 // ============================================
 // 여기에 5단계에서 받은 웹앱 URL을 넣으세요 (모든 화면 공통)
 // ============================================
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyuo-3Ex7NU-IVnRZLs9pIqBP3WLNXu70SxU94wBOLNBNOWMtS7YlLiM03sk9iE4e1bWQ/exec";
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwRZji-smstP6UoksLjgJHoeLt0pLPG6KW3rQIQSV9R6P-mEOc6x63NxP53hw1vnNOsIQ/exec";
 
 let _shJsonpCounter = 0;
 
