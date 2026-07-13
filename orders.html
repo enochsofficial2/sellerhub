@@ -349,7 +349,7 @@
     if (o['주문상태'] === '신규') {
       actionHtml += `<button class="btn btn-primary" id="btnGoShip">송장 등록</button>`;
     }
-    if (o['주문상태'] === '발송완료') {
+    if (o['주문상태'] !== '신규' && o['주문상태'] !== '취소') {
       actionHtml += `<button class="btn btn-ghost" id="btnPrintLabel">송장 출력</button>`;
     }
     if (o['주문상태'] === '신규') {
