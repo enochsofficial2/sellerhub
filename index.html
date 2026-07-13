@@ -281,95 +281,91 @@
 
   document.getElementById('refreshBtn').addEventListener('click', () => loadSummary(currentPeriod));
 
-  async function loadTodo() {
+  function renderTodo(orders) {
+    const card = document.getElementById('todoCard');
+    const icon = document.getElementById('todoIcon');
+    const title = document.getElementById('todoTitle');
+    const countEl = document.getElementById('todoCount');
+
+    const n = orders.filter(o => (o['주문상태'] || '신규') === '신규').length;
+    card.style.display = 'flex';
+
+    if (n > 0) {
+      card.classList.remove('done');
+      title.textContent = '송장 출력 대기 중';
+      countEl.innerHTML = '<b>' + n + '건</b>의 주문이 발송 처리를 기다리고 있어요';
+      card.onclick = () => { window.location.href = 'orders.html?status=신규'; };
+    } else {
+      card.classList.add('done');
+      icon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>';
+      title.textContent = '처리할 일 없음';
+      countEl.textContent = '신규 주문이 모두 처리됐어요';
+      card.onclick = () => { window.location.href = 'orders.html'; };
+    }
+  }
+
+  function renderPipeline(orders) {
+    const body = document.getElementById('pipelineBody');
+    const counts = { '신규': 0, '보류': 0, '송장출력완료': 0, '발송완료': 0, '반품접수': 0, '반품완료': 0, '취소': 0 };
+    orders.forEach(o => {
+      const s = o['주문상태'] || '신규';
+      if (counts[s] !== undefined) counts[s]++;
+    });
+
+    const rows = [
+      { key: '신규', label: '송장출력 대기', warn: false },
+      { key: '보류', label: '보류', warn: true },
+      { key: '송장출력완료', label: '전송 대기', warn: false },
+      { key: '발송완료', label: '발송완료', warn: false },
+      { key: '반품접수', label: '반품접수', warn: true },
+      { key: '반품완료', label: '반품완료(재입고)', warn: false },
+      { key: '취소', label: '취소', warn: true }
+    ];
+
+    body.innerHTML = rows.map(r => {
+      const n = counts[r.key];
+      const cls = 'pipeline-row' + (n > 0 ? (r.warn ? ' warn' : ' has-count') : '');
+      return `<div class="${cls}">
+        <span class="pipeline-dot"></span>
+        <span class="pipeline-label">${r.label}</span>
+        <span class="pipeline-count mono">${formatWon(n)}건</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderTrend(trend) {
+    const chartEl = document.getElementById('trendChart');
+    const maxCount = Math.max(...trend.map(t => t.count), 1);
+    const todayKey = new Date().toISOString().slice(0, 10);
+
+    chartEl.innerHTML = trend.map(t => {
+      const heightPct = Math.max(4, Math.round((t.count / maxCount) * 100));
+      const isToday = t.date === todayKey;
+      const dayLabel = Number(t.date.slice(8, 10));
+      return `<div class="trend-bar-wrap" title="${t.date}: ${t.count}건">
+        <div class="trend-bar ${t.count > 0 ? (isToday ? 'today' : 'has-value') : ''}" style="height:${heightPct}%"></div>
+        <div class="trend-day">${dayLabel}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // 처리할일/처리현황/추이차트를 API 1번으로 한번에 불러옴 (왕복 줄여서 속도 개선)
+  async function loadDashboardExtras() {
     try {
-      const orders = await callApi('listOrders', { status: '신규' });
-      const card = document.getElementById('todoCard');
-      const icon = document.getElementById('todoIcon');
-      const title = document.getElementById('todoTitle');
-      const countEl = document.getElementById('todoCount');
-
-      card.style.display = 'flex';
-      const n = (orders && !orders.error) ? orders.length : 0;
-
-      if (n > 0) {
-        card.classList.remove('done');
-        title.textContent = '송장 등록 대기 중';
-        countEl.innerHTML = '<b>' + n + '건</b>의 주문이 발송 처리를 기다리고 있어요';
-        card.onclick = () => { window.location.href = 'orders.html?status=신규'; };
-      } else {
-        card.classList.add('done');
-        icon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>';
-        title.textContent = '처리할 일 없음';
-        countEl.textContent = '신규 주문이 모두 처리됐어요';
-        card.onclick = () => { window.location.href = 'orders.html'; };
-      }
+      const data = await callApi('getDashboardExtras', {});
+      if (data.error) throw new Error(data.error);
+      renderTodo(data.orders);
+      renderPipeline(data.orders);
+      renderTrend(data.trend);
     } catch (e) {
       document.getElementById('todoCard').style.display = 'none';
+      document.getElementById('pipelineBody').innerHTML =
+        '<div style="font-size:12px; color:var(--ink-mute); text-align:center; padding:8px 0;">불러오지 못했어요</div>';
+      document.getElementById('trendChart').innerHTML =
+        '<div style="font-size:12px; color:var(--ink-mute); text-align:center; width:100%;">불러오지 못했어요</div>';
     }
   }
-  loadTodo();
-
-  async function loadPipeline() {
-    const body = document.getElementById('pipelineBody');
-    try {
-      const orders = await callApi('listOrders', {});
-      if (orders.error) throw new Error(orders.error);
-
-      const counts = { '신규': 0, '보류': 0, '송장출력완료': 0, '발송완료': 0, '반품접수': 0, '반품완료': 0, '취소': 0 };
-      orders.forEach(o => {
-        const s = o['주문상태'] || '신규';
-        if (counts[s] !== undefined) counts[s]++;
-      });
-
-      const rows = [
-        { key: '신규', label: '송장출력 대기', warn: false },
-        { key: '보류', label: '보류', warn: true },
-        { key: '송장출력완료', label: '전송 대기', warn: false },
-        { key: '발송완료', label: '발송완료', warn: false },
-        { key: '반품접수', label: '반품접수', warn: true },
-        { key: '반품완료', label: '반품완료(재입고)', warn: false },
-        { key: '취소', label: '취소', warn: true }
-      ];
-
-      body.innerHTML = rows.map(r => {
-        const n = counts[r.key];
-        const cls = 'pipeline-row' + (n > 0 ? (r.warn ? ' warn' : ' has-count') : '');
-        return `<div class="${cls}">
-          <span class="pipeline-dot"></span>
-          <span class="pipeline-label">${r.label}</span>
-          <span class="pipeline-count mono">${formatWon(n)}건</span>
-        </div>`;
-      }).join('');
-    } catch (e) {
-      body.innerHTML = '<div style="font-size:12px; color:var(--ink-mute); text-align:center; padding:8px 0;">불러오지 못했어요</div>';
-    }
-  }
-  loadPipeline();
-
-  async function loadTrend() {
-    const chartEl = document.getElementById('trendChart');
-    try {
-      const trend = await callApi('getTrend', { days: 14 });
-      if (trend.error) throw new Error(trend.error);
-
-      const maxCount = Math.max(...trend.map(t => t.count), 1);
-      const todayKey = new Date().toISOString().slice(0, 10);
-
-      chartEl.innerHTML = trend.map(t => {
-        const heightPct = Math.max(4, Math.round((t.count / maxCount) * 100));
-        const isToday = t.date === todayKey;
-        const dayLabel = Number(t.date.slice(8, 10));
-        return `<div class="trend-bar-wrap" title="${t.date}: ${t.count}건">
-          <div class="trend-bar ${t.count > 0 ? (isToday ? 'today' : 'has-value') : ''}" style="height:${heightPct}%"></div>
-          <div class="trend-day">${dayLabel}</div>
-        </div>`;
-      }).join('');
-    } catch (e) {
-      chartEl.innerHTML = '<div style="font-size:12px; color:var(--ink-mute); text-align:center; width:100%;">불러오지 못했어요</div>';
-    }
-  }
-  loadTrend();
+  loadDashboardExtras();
 
   document.querySelectorAll('[data-soon]').forEach(el => {
     el.addEventListener('click', () => showToast('다음 단계에서 만들 예정이에요'));
