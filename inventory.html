@@ -111,7 +111,9 @@
   <div class="sheet-sub">등록하면 바로 재고관리 대상이 돼요</div>
   <div class="field"><label>상품명 *</label><input type="text" id="pName" placeholder="예: 무선 이어폰 케이스"></div>
   <div class="field"><label>SKU / 옵션코드</label><input type="text" id="pSku" placeholder="선택사항"></div>
-  <div class="field"><label>카테고리</label><select id="pCategory"><option value="미분류">미분류</option></select></div>
+  <div class="field"><label>카테고리</label>
+    <select id="pCategory"><option value="미분류">미분류</option><option value="__new__">+ 새 카테고리 추가</option></select>
+  </div>
   <div class="field"><label>초기 재고수량</label><input type="number" id="pStock" value="0" min="0"></div>
   <div class="field"><label>안전재고 (이 이하면 부족 표시)</label><input type="number" id="pSafety" value="5" min="0"></div>
   <div class="field"><label>판매가</label><input type="number" id="pPrice" placeholder="원"></div>
@@ -220,9 +222,28 @@
       const cats = await callApi('listCategories', {});
       if (cats.error || !cats.length) return;
       const sel = document.getElementById('pCategory');
-      sel.innerHTML = cats.map(c => `<option value="${c['카테고리명']}">${c['카테고리명']}</option>`).join('');
+      sel.innerHTML = cats.map(c => `<option value="${c['카테고리명']}">${c['카테고리명']}</option>`).join('')
+        + '<option value="__new__">+ 새 카테고리 추가</option>';
     } catch (e) {}
   })();
+
+  document.getElementById('pCategory').addEventListener('change', async (e) => {
+    if (e.target.value !== '__new__') return;
+    const name = prompt('새 카테고리 이름을 입력해주세요');
+    if (!name) { e.target.value = '미분류'; return; }
+    try {
+      const res = await callApi('addCategory', { name });
+      if (res.error) throw new Error(res.error);
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      e.target.insertBefore(opt, e.target.lastElementChild);
+      e.target.value = name;
+      showToast('카테고리가 추가됐어요');
+    } catch (err) {
+      showToast('추가 실패: ' + err.message);
+      e.target.value = '미분류';
+    }
+  });
 
   // 담당자 자동완성 목록
   (async function loadStaffSuggestions() {
