@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>종합현황 - 셀러허브</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F1B2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .period-note{position:relative; font-size:12px; color:rgba(255,255,255,0.6); margin-top:4px;}
+
+  .insight-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:14px;}
+  .insight-title{font-size:13.5px; font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:7px;}
+  .insight-title svg{color:var(--amber); flex-shrink:0;}
+
+  .rank-row{display:flex; align-items:center; gap:11px; padding:9px 0;}
+  .rank-row:not(:last-child){border-bottom:1px solid var(--bg);}
+  .rank-badge{width:24px; height:24px; border-radius:7px; background:var(--bg); color:var(--ink-mute);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0;}
+  .rank-row:nth-child(1) .rank-badge{background:var(--amber); color:#fff;}
+  .rank-info{flex:1; min-width:0;}
+  .rank-name{font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rank-sub{font-size:11px; color:var(--ink-mute); margin-top:1px;}
+  .rank-amount{font-size:13.5px; font-weight:800; flex-shrink:0;}
+
+  .channel-row{margin-bottom:12px;}
+  .channel-row:last-child{margin-bottom:0;}
+  .channel-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+  .channel-name{font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px;}
+  .channel-dot{width:8px; height:8px; border-radius:50%;}
+  .channel-pct{font-size:12px; color:var(--ink-mute); font-weight:700;}
+  .channel-bar-track{height:8px; border-radius:999px; background:var(--bg); overflow:hidden;}
+  .channel-bar-fill{height:100%; border-radius:999px;}
+
+  .hour-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .hour-block{background:var(--bg); border-radius:12px; padding:12px 8px; text-align:center;}
+  .hour-block.peak{background:linear-gradient(135deg, var(--amber), #F0BC6A); color:#fff;}
+  .hour-block-label{font-size:10.5px; color:inherit; opacity:0.8; margin-bottom:6px; font-weight:600;}
+  .hour-block-value{font-size:17px; font-weight:800;}
+
+  .staff-perf-row{display:flex; align-items:center; gap:10px; padding:8px 0;}
+  .staff-perf-name{flex:1; font-size:13px; font-weight:700;}
+  .staff-perf-bar-track{flex:2; height:8px; border-radius:999px; background:var(--bg); overflow:hidden;}
+  .staff-perf-bar-fill{height:100%; border-radius:999px; background:var(--navy);}
+  .staff-perf-count{font-size:12.5px; font-weight:800; width:40px; text-align:right; flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand"><span class="dot"></span>SELLER HUB</div>
+    <h1 class="page-title">종합현황</h1>
+    <div class="period-note">최근 30일 기준 · 대표/담당자가 한눈에 보는 요약</div>
+  </header>
+
+  <main>
+    <div class="insight-card">
+      <div class="insight-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+        인기상품 TOP 5
+      </div>
+      <div id="topProducts"></div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18M3 12h18"/></svg>
+        쇼핑몰별 비중
+      </div>
+      <div id="channelBreakdown"></div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        시간대별 주문 분포
+      </div>
+      <div class="hour-grid" id="hourGrid"></div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
+        담당자별 처리 건수
+      </div>
+      <div id="staffPerf"></div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <nav class="bottom">
+    <div class="bottom-inner">
+      <a href="index.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        대시보드
+      </a>
+      <a href="orders.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
+        주문
+      </a>
+      <a href="inventory.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        재고
+      </a>
+      <a href="insights.html" class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+        종합
+      </a>
+      <a href="profile.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
+        내정보
+      </a>
+    </div>
+  </nav>
+
+</div>
+
+<script src="common.js"></script>
+<script>
+  const CHANNEL_COLORS = { '쿠팡': 'var(--coupang)', '네이버': 'var(--naver)', '직접판매': 'var(--navy)', '기타': 'var(--ink-mute)' };
+
+  async function loadAnalytics() {
+    try {
+      const data = await callApi('getAnalytics', { days: 30 });
+      if (data.error) throw new Error(data.error);
+      renderTopProducts(data.topProducts);
+      renderChannels(data.channelBreakdown);
+      renderHourBlocks(data.hourBlocks);
+      renderStaffPerf(data.staffPerformance);
+    } catch (e) {
+      showToast('불러오기 실패: ' + e.message);
+    }
+  }
+
+  function renderTopProducts(products) {
+    const el = document.getElementById('topProducts');
+    if (!products.length) {
+      el.innerHTML = `<div class="empty" style="padding:20px;"><b>아직 데이터가 없어요</b>주문이 쌓이면 인기상품이 표시돼요</div>`;
+      return;
+    }
+    el.innerHTML = products.map((p, i) => `<div class="rank-row">
+      <div class="rank-badge">${i + 1}</div>
+      <div class="rank-info">
+        <div class="rank-name">${p.name}</div>
+        <div class="rank-sub mono">${formatWon(p.count)}개 판매</div>
+      </div>
+      <div class="rank-amount mono">${formatWon(p.amount)}원</div>
+    </div>`).join('');
+  }
+
+  function renderChannels(channels) {
+    const el = document.getElementById('channelBreakdown');
+    if (!channels.length) {
+      el.innerHTML = `<div class="empty" style="padding:20px;"><b>아직 데이터가 없어요</b>채널별 데이터가 쌓이면 비중이 표시돼요</div>`;
+      return;
+    }
+    const total = channels.reduce((s, c) => s + c.amount, 0) || 1;
+    el.innerHTML = channels.map(c => {
+      const pct = Math.round((c.amount / total) * 100);
+      const color = CHANNEL_COLORS[c.channel] || 'var(--ink-mute)';
+      return `<div class="channel-row">
+        <div class="channel-top">
+          <div class="channel-name"><span class="channel-dot" style="background:${color}"></span>${c.channel}</div>
+          <div class="channel-pct">${pct}% · ${formatWon(c.amount)}원</div>
+        </div>
+        <div class="channel-bar-track"><div class="channel-bar-fill" style="width:${pct}%; background:${color}"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderHourBlocks(blocks) {
+    const el = document.getElementById('hourGrid');
+    const entries = Object.keys(blocks).map(k => ({ label: k, value: blocks[k] }));
+    const max = Math.max(...entries.map(e => e.value), 0);
+    el.innerHTML = entries.map(e => `<div class="hour-block ${e.value === max && max > 0 ? 'peak' : ''}">
+      <div class="hour-block-label">${e.label}</div>
+      <div class="hour-block-value mono">${e.value}건</div>
+    </div>`).join('');
+  }
+
+  function renderStaffPerf(staff) {
+    const el = document.getElementById('staffPerf');
+    if (!staff.length) {
+      el.innerHTML = `<div class="empty" style="padding:20px;"><b>아직 데이터가 없어요</b>담당자를 지정해서 주문을 처리하면 표시돼요</div>`;
+      return;
+    }
+    const max = Math.max(...staff.map(s => s.count), 1);
+    el.innerHTML = staff.map(s => `<div class="staff-perf-row">
+      <div class="staff-perf-name">${s.staff}</div>
+      <div class="staff-perf-bar-track"><div class="staff-perf-bar-fill" style="width:${Math.round((s.count/max)*100)}%"></div></div>
+      <div class="staff-perf-count mono">${s.count}건</div>
+    </div>`).join('');
+  }
+
+  loadAnalytics();
+</script>
+</body>
+</html>
