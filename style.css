@@ -111,7 +111,7 @@ nav.bottom{position:fixed; bottom:0; left:0; right:0; background:var(--surface);
 
 /* ===== PC(넓은 화면) 레이아웃: 하단탭 -> 좌측 사이드바, 본문 넓게 ===== */
 @media (min-width: 900px) {
-  .app{max-width:900px; margin:0 0 0 240px; padding-bottom:32px;}
+  .app{max-width:1000px; margin:0 0 0 240px; padding-bottom:32px;}
 
   nav.bottom{
     left:0; right:auto; top:0; bottom:0; width:220px; height:100vh;
