@@ -125,6 +125,13 @@
     cursor:pointer; color:var(--ink); font-size:13px;}
   .pagination-nav button:disabled{opacity:0.35; cursor:default;}
   .pagination-nav .page-info{font-weight:700; color:var(--ink); min-width:60px; text-align:center;}
+
+  @media (min-width: 900px) {
+    .app{max-width:1500px;}
+  }
+
+  .copyable{cursor:pointer; border-bottom:1px dashed var(--ink-mute);}
+  .copyable:hover{color:var(--navy); border-bottom-color:var(--navy);}
 </style>
 </head>
 <body>
@@ -189,6 +196,8 @@
             <th>상태</th>
             <th>상품명</th>
             <th>수취인</th>
+            <th>연락처</th>
+            <th>주소</th>
             <th>수량</th>
             <th class="col-amount">금액</th>
             <th>주문일시</th>
@@ -445,10 +454,12 @@
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">미전송</span>' : ''}</td>
       <td>${o['상품명'] || '-'}</td>
       <td>${o['구매자명'] || '-'}</td>
+      <td class="mono ${o['구매자연락처'] ? 'copyable' : ''}" ${o['구매자연락처'] ? `data-copy="${o['구매자연락처']}"` : ''}>${o['구매자연락처'] || '-'}</td>
+      <td class="${o['구매자주소'] ? 'copyable' : ''}" ${o['구매자주소'] ? `data-copy="${o['구매자주소']}"` : ''} style="max-width:220px;">${o['구매자주소'] || '-'}</td>
       <td>${formatWon(o['수량'])}개</td>
       <td class="col-amount">${formatWon(o['판매가'])}원</td>
       <td>${dateStr}</td>
-      <td class="mono">${o['송장_송장번호'] || '-'}</td>
+      <td class="mono ${o['송장_송장번호'] ? 'copyable' : ''}" ${o['송장_송장번호'] ? `data-copy="${o['송장_송장번호']}"` : ''}>${o['송장_송장번호'] || '-'}</td>
       <td class="delivery-status-cell" data-order-id-status="${o['주문ID']}">
         ${o['송장_송장번호'] ? `<button class="delivery-check-btn" data-check-delivery="${o['주문ID']}">조회</button>` : '-'}
       </td>
@@ -493,7 +504,7 @@
         <b>주문이 없어요</b>${currentStatus ? '이 상태의 주문이 아직 없어요' : '채널 연동이 완료되면 여기 자동으로 쌓여요'}
       </div>`;
       listEl.innerHTML = emptyHtml;
-      tableBody.innerHTML = `<tr><td colspan="11" style="padding:30px; text-align:center; color:var(--ink-mute);">주문이 없어요</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="13" style="padding:30px; text-align:center; color:var(--ink-mute);">주문이 없어요</td></tr>`;
       updatePaginationUI();
       updateTableBulkBar();
       return;
@@ -554,6 +565,18 @@
   });
 
   document.getElementById('orderTableBody').addEventListener('click', async (e) => {
+    const copyEl = e.target.closest('[data-copy]');
+    if (copyEl) {
+      e.stopPropagation();
+      const text = copyEl.dataset.copy;
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('복사됨: ' + text);
+      } catch (err) {
+        showToast('복사 실패 (브라우저 권한을 확인해주세요)');
+      }
+      return;
+    }
     const check = e.target.closest('[data-row-check]');
     if (check) {
       e.stopPropagation();
