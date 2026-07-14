@@ -75,8 +75,25 @@ nav.bottom{position:fixed; bottom:0; left:0; right:0; background:var(--surface);
   transform:translateY(100%); transition:transform .25s ease; z-index:91; max-height:85vh; overflow-y:auto;}
 .sheet.show{transform:translateY(0);}
 .sheet-handle{width:36px; height:4px; background:var(--line); border-radius:999px; margin:0 auto 16px;}
-.sheet h2{font-size:17px; margin:0 0 4px;}
+.sheet h2{font-size:17px; margin:0 0 4px; padding-right:28px;}
 .sheet .sheet-sub{font-size:12px; color:var(--ink-mute); margin-bottom:16px;}
+
+.sheet-close{position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:50%;
+  background:var(--bg); border:0; color:var(--ink-mute); display:flex; align-items:center; justify-content:center;
+  cursor:pointer; z-index:2;}
+.sheet-close:hover{background:var(--line); color:var(--ink);}
+
+/* 넓은 화면(PC): 아래에서 슬라이드업 대신 화면 중앙에 카드형 모달로 표시 */
+@media (min-width: 900px) {
+  .sheet{
+    left:50%; right:auto; bottom:auto; top:50%;
+    transform:translate(-50%, -46%) scale(0.97); opacity:0; pointer-events:none;
+    width:460px; max-width:90vw; border-radius:18px; padding:26px;
+    transition:transform .2s ease, opacity .2s ease; box-shadow:0 20px 60px rgba(15,27,46,0.25);
+  }
+  .sheet.show{transform:translate(-50%, -50%) scale(1); opacity:1; pointer-events:auto;}
+  .sheet-handle{display:none;}
+}
 
 .field{margin-bottom:14px;}
 .field label{display:block; font-size:12px; color:var(--ink-mute); margin-bottom:6px; font-weight:600;}
