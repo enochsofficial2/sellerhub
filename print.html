@@ -79,6 +79,18 @@
     const carrier = order['송장_택배사'] || '택배사 미지정';
     const barcodeId = 'barcode_' + idx;
 
+    let productBlock = `<div class="product-name">${order['상품명'] || '-'} 외 ${order['수량'] || 0}개</div>`;
+    if (order['품목목록JSON']) {
+      try {
+        const items = JSON.parse(order['품목목록JSON']);
+        if (items.length > 1) {
+          productBlock = items.map(it =>
+            `<div class="product-name" style="font-size:12px;">${it.productName} × ${it.quantity}개</div>`
+          ).join('');
+        }
+      } catch (e) {}
+    }
+
     return `
       <div class="label">
         <div class="label-topbar">
@@ -109,7 +121,7 @@
 
         <div class="product-row">
           <span class="addr-label">상품정보</span>
-          <div class="product-name">${order['상품명'] || '-'} 외 ${order['수량'] || 0}개</div>
+          ${productBlock}
           <div class="product-meta">채널: ${order['판매채널'] || '기타'} · 주문번호 ${order['채널주문번호'] || '-'}</div>
         </div>
 
