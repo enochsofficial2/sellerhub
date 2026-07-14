@@ -171,17 +171,18 @@
 
     <div class="bulk-print-bar" id="bulkPrintBar" style="display:none;">
       <div class="bulk-print-bar-text">신규 주문 <b id="bulkPrintCount">0</b>건 - 상품명순으로 한번에 출력</div>
-      <button class="bulk-print-btn" id="bulkPrintBtn">전체 출력</button>
+      <div style="display:flex; gap:8px;">
+        <button class="bulk-print-btn" id="bulkPrintBtn">전체 출력</button>
+        <button class="bulk-print-btn" id="tableBulkPrintBtn" style="background:var(--surface); color:var(--navy);">
+          선택 항목 재출력<span id="tableBulkCount"></span>
+        </button>
+      </div>
     </div>
     <div class="bulk-print-bar" id="bulkSendBar" style="display:none;">
       <div class="bulk-print-bar-text">송장출력완료 <b id="bulkSendCount">0</b>건 - 채널로 한번에 전송</div>
       <button class="bulk-print-btn" id="bulkSendBtn">일괄 전송</button>
     </div>
     <div class="view-toggle-row">
-      <button class="view-toggle-btn" id="tableBulkPrintBtn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        선택 항목 재출력<span id="tableBulkCount"></span>
-      </button>
       <button class="view-toggle-btn" id="excelDownloadBtn" style="display:none;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
         출고내역서 다운로드
@@ -343,10 +344,10 @@
   </div>
   <div class="field">
     <label>상품 *</label>
-    <select id="oProduct"><option value="">상품을 먼저 재고관리에서 등록해주세요</option></select>
+    <input type="text" id="oProduct" list="orderProductList" placeholder="상품명 입력 (재고에 있는 상품이면 자동 연동돼요)">
+    <datalist id="orderProductList"></datalist>
   </div>
   <div class="field"><label>수량 *</label><input type="number" id="oQty" value="1" min="1"></div>
-  <div class="field"><label>판매가 (비우면 상품 기본가 적용)</label><input type="number" id="oPrice" placeholder="원"></div>
   <div class="field"><label>구매자명</label><input type="text" id="oBuyerName" placeholder="선택사항"></div>
   <div class="field"><label>연락처</label><input type="text" id="oBuyerPhone" placeholder="선택사항"></div>
   <div class="field"><label>주소</label><input type="text" id="oBuyerAddress" placeholder="선택사항"></div>
@@ -1197,12 +1198,8 @@
       const products = await callApi('listProducts', {});
       if (products.error) return;
       allProductsForOrder = products;
-      const sel = document.getElementById('oProduct');
-      if (!products.length) {
-        sel.innerHTML = '<option value="">상품을 먼저 재고관리에서 등록해주세요</option>';
-        return;
-      }
-      sel.innerHTML = products.map(p => `<option value="${p['상품ID']}">${p['상품명']} (재고 ${p['현재재고']})</option>`).join('');
+      document.getElementById('orderProductList').innerHTML =
+        products.map(p => `<option value="${p['상품명']}">재고 ${p['현재재고']}개</option>`).join('');
     } catch (e) {}
   }
 
@@ -1214,26 +1211,30 @@
   document.getElementById('addOrderOverlay').addEventListener('click', () => closeSheet('addOrderOverlay', 'addOrderSheet'));
 
   document.getElementById('addOrderSubmit').addEventListener('click', async () => {
-    const productId = document.getElementById('oProduct').value;
+    const productName = document.getElementById('oProduct').value.trim();
     const qty = document.getElementById('oQty').value;
-    if (!productId) { showToast('상품을 선택해주세요'); return; }
+    if (!productName) { showToast('상품명을 입력해주세요'); return; }
     if (!qty || Number(qty) < 1) { showToast('수량을 확인해주세요'); return; }
+
+    // 재고에 있는 상품명과 정확히 일치하면 자동으로 연동 (재고차감/단가 적용), 아니면 이름만 기록
+    const matched = allProductsForOrder.find(p => p['상품명'] === productName);
 
     const btn = document.getElementById('addOrderSubmit');
     btn.disabled = true;
     try {
       const res = await callApi('createOrderManual', {
         channel: document.getElementById('oChannel').value,
-        productId, quantity: qty,
-        price: document.getElementById('oPrice').value,
+        productId: matched ? matched['상품ID'] : '',
+        productName: productName,
+        quantity: qty,
         buyerName: document.getElementById('oBuyerName').value.trim(),
         buyerPhone: document.getElementById('oBuyerPhone').value.trim(),
         buyerAddress: document.getElementById('oBuyerAddress').value.trim()
       });
       if (res.error) throw new Error(res.error);
-      showToast('주문이 등록됐어요');
+      showToast('주문이 등록됐어요' + (matched ? '' : ' (재고 연동 없이 이름만 기록됐어요)'));
       closeSheet('addOrderOverlay', 'addOrderSheet');
-      ['oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oPrice'].forEach(id => document.getElementById(id).value = '');
+      ['oProduct', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('oQty').value = 1;
       loadOrders(currentStatus);
     } catch (e) {
