@@ -42,16 +42,26 @@
   .hour-block.peak{background:linear-gradient(135deg, var(--amber), #F0BC6A); color:#fff;}
   .hour-block-label{font-size:10.5px; color:inherit; opacity:0.8; margin-bottom:6px; font-weight:600;}
   .hour-block-value{font-size:17px; font-weight:800;}
+  .hour-block-channels{margin-top:7px; padding-top:7px; border-top:1px solid rgba(0,0,0,0.08); font-size:9.5px; opacity:0.85; line-height:1.5;}
+  .hour-block.peak .hour-block-channels{border-top-color:rgba(255,255,255,0.3);}
 
-  .staff-perf-row{display:flex; align-items:center; gap:10px; padding:8px 0;}
-  .staff-perf-name{flex:1; font-size:13px; font-weight:700;}
-  .staff-perf-bar-track{flex:2; height:8px; border-radius:999px; background:var(--bg); overflow:hidden;}
-  .staff-perf-bar-fill{height:100%; border-radius:999px; background:var(--navy);}
-  .staff-perf-count{font-size:12.5px; font-weight:800; width:40px; text-align:right; flex-shrink:0;}
+  .reco-card{background:linear-gradient(145deg, #12203D, #1B2C47); color:#fff; border-radius:16px; padding:20px; margin-bottom:14px; position:relative; overflow:hidden;}
+  .reco-card::after{content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px;
+    background: radial-gradient(circle, rgba(232,163,61,0.25), transparent 70%);}
+  .reco-title{font-size:13.5px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:7px; position:relative;}
+  .reco-title svg{color:var(--amber); flex-shrink:0;}
+  .reco-sub{font-size:11.5px; color:rgba(255,255,255,0.55); margin-bottom:14px; position:relative;}
+  .reco-item{display:flex; gap:10px; padding:10px 0; border-top:1px solid rgba(255,255,255,0.1); position:relative;}
+  .reco-item:first-of-type{border-top:0;}
+  .reco-icon{width:26px; height:26px; border-radius:8px; background:rgba(232,163,61,0.18); color:var(--amber);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; font-weight:800;}
+  .reco-text{font-size:12.5px; line-height:1.6; color:rgba(255,255,255,0.9);}
+  .reco-text b{color:#fff; font-weight:800;}
 
   @media (min-width: 900px) {
     main{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start;}
     .insight-card{margin-bottom:0;}
+    .reco-card{grid-column: 1 / -1;}
   }
 </style>
 </head>
@@ -65,7 +75,16 @@
   </header>
 
   <main>
-    <div class="insight-card">
+    <div class="reco-card">
+      <div class="reco-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        추천 전략
+      </div>
+      <div class="reco-sub">최근 30일 데이터를 기반으로 자동 분석된 제안이에요</div>
+      <div id="recoList"></div>
+    </div>
+
+    <div class="insight-card" id="topProductsCard">
       <div class="insight-title">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
         인기상품 TOP 5
@@ -129,7 +148,8 @@
       if (data.error) throw new Error(data.error);
       renderTopProducts(data.topProducts);
       renderChannels(data.channelBreakdown);
-      renderHourBlocks(data.hourBlocks);
+      renderHourBlocks(data.hourBlocks, data.hourBlocksByChannel);
+      renderRecommendations(data);
     } catch (e) {
       showToast('불러오기 실패: ' + e.message);
     }
@@ -171,13 +191,86 @@
     }).join('');
   }
 
-  function renderHourBlocks(blocks) {
+  function renderHourBlocks(blocks, blocksByChannel) {
     const el = document.getElementById('hourGrid');
     const entries = Object.keys(blocks).map(k => ({ label: k, value: blocks[k] }));
     const max = Math.max(...entries.map(e => e.value), 0);
-    el.innerHTML = entries.map(e => `<div class="hour-block ${e.value === max && max > 0 ? 'peak' : ''}">
-      <div class="hour-block-label">${e.label}</div>
-      <div class="hour-block-value mono">${e.value}건</div>
+
+    el.innerHTML = entries.map(e => {
+      const byChannel = (blocksByChannel && blocksByChannel[e.label]) || {};
+      const topChannels = Object.keys(byChannel)
+        .map(ch => ({ ch, n: byChannel[ch] }))
+        .sort((a, b) => b.n - a.n)
+        .slice(0, 2);
+      const channelText = topChannels.length
+        ? topChannels.map(c => c.ch + ' ' + c.n).join(' · ')
+        : '-';
+
+      return `<div class="hour-block ${e.value === max && max > 0 ? 'peak' : ''}">
+        <div class="hour-block-label">${e.label}</div>
+        <div class="hour-block-value mono">${e.value}건</div>
+        <div class="hour-block-channels">${channelText}</div>
+      </div>`;
+    }).join('');
+  }
+
+  /**
+   * 데이터 기반 규칙형 추천 전략 생성
+   * (실시간 데이터로 매번 다시 계산되므로 데이터가 바뀌면 추천 내용도 자동으로 갱신됨)
+   */
+  function renderRecommendations(data) {
+    const el = document.getElementById('recoList');
+    const { topProducts, channelBreakdown, hourBlocks } = data;
+    const items = [];
+
+    if (!channelBreakdown.length && !topProducts.length) {
+      el.innerHTML = `<div class="reco-item"><div class="reco-text">아직 데이터가 충분하지 않아요. 주문이 쌓이면 맞춤 제안이 여기에 나타나요.</div></div>`;
+      return;
+    }
+
+    // 1. 채널 집중도 분석
+    if (channelBreakdown.length) {
+      const totalAmount = channelBreakdown.reduce((s, c) => s + c.amount, 0) || 1;
+      const top = channelBreakdown[0];
+      const topPct = Math.round((top.amount / totalAmount) * 100);
+
+      if (channelBreakdown.length === 1) {
+        items.push({ icon: '①', text: `현재 <b>${top.channel}</b> 채널에서만 매출이 발생하고 있어요. 다른 채널(11번가, 카페24 등)로 확장하면 새로운 고객층을 확보할 수 있어요.` });
+      } else if (topPct >= 50) {
+        items.push({ icon: '①', text: `<b>${top.channel}</b>이 전체 매출의 <b>${topPct}%</b>를 차지해요. 이 채널에 프로모션·재고를 우선 배정하는 게 효율적이에요. 다만 특정 채널 의존도가 높은 편이라, 정책 변경 리스크에 대비해 2위 채널(${channelBreakdown[1].channel})도 함께 키워두는 걸 추천해요.` });
+      } else {
+        items.push({ icon: '①', text: `<b>${top.channel}</b>이 매출 1위(${topPct}%)지만 채널별 비중이 고르게 분산돼 있어요. 여러 채널을 균형있게 운영하는 지금 전략이 리스크 분산 측면에서 좋아요.` });
+      }
+    }
+
+    // 2. 인기 시간대 분석
+    const hourEntries = Object.keys(hourBlocks).map(k => ({ label: k, value: hourBlocks[k] }));
+    const totalHourCount = hourEntries.reduce((s, e) => s + e.value, 0);
+    if (totalHourCount > 0) {
+      const peak = hourEntries.reduce((a, b) => (b.value > a.value ? b : a));
+      const peakPct = Math.round((peak.value / totalHourCount) * 100);
+      const timeAdvice = {
+        '새벽(0-6시)': '심야 시간대 구매가 활발해요. 자동 응대(챗봇)나 예약발송 광고를 활용하면 좋아요.',
+        '오전(6-12시)': '출근/등교 시간대에 구매가 몰려요. 오전 8~10시 사이 알림/광고 노출을 늘려보세요.',
+        '오후(12-18시)': '점심시간 이후 오후 구매가 많아요. 점심시간대(12~1시) 타겟 광고가 효과적일 수 있어요.',
+        '저녁(18-24시)': '퇴근 후 저녁 시간대 구매가 활발해요. 저녁 7~9시 사이 SNS 광고·알림 발송을 집중하면 좋아요.'
+      };
+      items.push({ icon: '②', text: `주문의 <b>${peakPct}%</b>가 <b>${peak.label}</b>에 몰려있어요. ${timeAdvice[peak.label] || ''}` });
+    }
+
+    // 3. 인기상품 기반 제안
+    if (topProducts.length) {
+      const top = topProducts[0];
+      if (topProducts.length >= 3) {
+        items.push({ icon: '③', text: `<b>${top.name}</b>이 매출 1위예요. TOP3 상품을 묶은 세트/번들 구성을 만들면 객단가를 올릴 수 있어요.` });
+      } else {
+        items.push({ icon: '③', text: `<b>${top.name}</b>이 매출 1위예요. 이 상품 위주로 리뷰 이벤트나 상세페이지 개선을 진행하면 전환율을 더 끌어올릴 수 있어요.` });
+      }
+    }
+
+    el.innerHTML = items.map(it => `<div class="reco-item">
+      <div class="reco-icon">${it.icon}</div>
+      <div class="reco-text">${it.text}</div>
     </div>`).join('');
   }
 
