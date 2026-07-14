@@ -124,5 +124,4 @@ nav.bottom{position:fixed; bottom:0; left:0; right:0; background:var(--surface);
 
   .refresh-btn{right:32px !important;}
   .fab{right:32px !important;}
-  .sheet, .sheet-overlay{max-width:420px; margin-left:240px;}
 }
