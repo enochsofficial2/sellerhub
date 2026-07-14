@@ -178,6 +178,10 @@
       <button class="bulk-print-btn" id="bulkSendBtn">일괄 전송</button>
     </div>
     <div class="view-toggle-row">
+      <button class="view-toggle-btn" id="tableBulkPrintBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        선택 항목 재출력<span id="tableBulkCount"></span>
+      </button>
       <button class="view-toggle-btn" id="excelDownloadBtn" style="display:none;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
         출고내역서 다운로드
@@ -188,10 +192,6 @@
       </button>
     </div>
     <div class="order-table-wrap">
-      <div class="table-bulk-bar" id="tableBulkBar">
-        <span id="tableBulkCount">0건 선택됨</span>
-        <button id="tableBulkPrintBtn">선택 항목 송장 재출력</button>
-      </div>
       <table class="order-table">
         <thead>
           <tr>
@@ -509,14 +509,8 @@
   }
 
   function updateTableBulkBar() {
-    const bar = document.getElementById('tableBulkBar');
     const n = selectedIds.size;
-    if (n > 0) {
-      bar.classList.add('show');
-      document.getElementById('tableBulkCount').textContent = n + '건 선택됨';
-    } else {
-      bar.classList.remove('show');
-    }
+    document.getElementById('tableBulkCount').textContent = n > 0 ? ` (${n})` : '';
     document.getElementById('selectAllCheck').checked = n > 0 && getPagedOrders().every(o => selectedIds.has(o['주문ID']));
   }
 
@@ -691,6 +685,7 @@
     if (!targets.length) { showToast('출력할 주문을 선택해주세요'); return; }
 
     const btn = document.getElementById('tableBulkPrintBtn');
+    const originalHtml = btn.innerHTML;
     btn.disabled = true;
     btn.textContent = '처리 중...';
 
@@ -709,7 +704,7 @@
     }
 
     btn.disabled = false;
-    btn.textContent = '선택 항목 송장 재출력';
+    btn.innerHTML = originalHtml;
 
     if (printIds.length) {
       showToast(printIds.length + '건 출력됐어요');
