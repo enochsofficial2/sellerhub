@@ -142,13 +142,11 @@
     <div class="brand"><span class="dot"></span>SELLER HUB</div>
     <h1 class="page-title">주문관리</h1>
     <div class="filter-tabs" id="filterTabs">
-      <button data-status="" class="active">전체</button>
-      <button data-status="신규">신규</button>
-      <button data-status="보류">보류</button>
+      <button data-status="신규" class="active">송장미출력</button>
       <button data-status="송장출력완료">송장출력완료</button>
       <button data-status="발송완료">발송완료</button>
-      <button data-status="반품접수">반품접수</button>
-      <button data-status="반품완료">반품완료</button>
+      <button data-status="__return__">반품</button>
+      <button data-status="보류">보류</button>
       <button data-status="취소">취소</button>
       <button data-status="__unsent__">송장미전송</button>
     </div>
@@ -353,6 +351,20 @@
   </div>
 </div>
 
+<!-- 일괄전송 쇼핑몰 선택 바텀시트 -->
+<div class="sheet-overlay" id="sendChannelOverlay"></div>
+<div class="sheet" id="sendChannelSheet">
+  <button class="sheet-close" onclick="closeSheet('sendChannelOverlay','sendChannelSheet')">&times;</button>
+  <div class="sheet-handle"></div>
+  <h2>일괄전송 대상 선택</h2>
+  <div class="sheet-sub">체크한 쇼핑몰의 송장출력완료 주문만 전송돼요</div>
+  <div id="sendChannelList"></div>
+  <div class="btn-row" style="margin-top:14px;">
+    <button class="btn btn-ghost" id="sendChannelCancel">취소</button>
+    <button class="btn btn-primary" id="sendChannelConfirm">전송하기</button>
+  </div>
+</div>
+
 <!-- 취소 처리 폼 바텀시트 -->
 <div class="sheet-overlay" id="cancelOverlay"></div>
 <div class="sheet" id="cancelSheet">
@@ -372,7 +384,7 @@
 
 <script src="common.js"></script>
 <script>
-  let currentStatus = '';
+  let currentStatus = '신규';
   let currentOrders = [];
   let activeOrderId = null;
   let groupBySite = false;
@@ -386,11 +398,15 @@
     const listEl = document.getElementById('orderList');
     try {
       const isUnsentFilter = status === '__unsent__';
-      const data = await callApi('listOrders', (status && !isUnsentFilter) ? { status } : {});
+      const isReturnFilter = status === '__return__';
+      const needsClientFilter = isUnsentFilter || isReturnFilter;
+      const data = await callApi('listOrders', (status && !needsClientFilter) ? { status } : {});
       if (data.error) throw new Error(data.error);
       currentOrders = isUnsentFilter
         ? (data || []).filter(o => o['채널전송상태'] === '실패')
-        : (data || []);
+        : isReturnFilter
+          ? (data || []).filter(o => o['주문상태'] === '반품접수' || o['주문상태'] === '반품완료')
+          : (data || []);
       currentPage = 1;
       selectedIds.clear();
 
@@ -702,9 +718,34 @@
     loadOrders(currentStatus);
   });
 
-  document.getElementById('bulkSendBtn').addEventListener('click', async () => {
+  document.getElementById('bulkSendBtn').addEventListener('click', () => {
     const targets = currentOrders.filter(o => o['주문상태'] === '송장출력완료');
     if (!targets.length) { showToast('전송할 주문이 없어요'); return; }
+
+    const channels = [...new Set(targets.map(o => o['판매채널'] || '기타'))];
+    document.getElementById('sendChannelList').innerHTML = channels.map(ch => {
+      const count = targets.filter(o => (o['판매채널'] || '기타') === ch).length;
+      return `<div class="collect-channel-row">
+        <input type="checkbox" value="${ch}" checked data-send-channel>
+        <span class="collect-channel-name">${ch}</span>
+        <span class="collect-channel-badge on">${count}건</span>
+      </div>`;
+    }).join('');
+
+    openSheet('sendChannelOverlay', 'sendChannelSheet');
+  });
+
+  document.getElementById('sendChannelCancel').addEventListener('click', () => closeSheet('sendChannelOverlay', 'sendChannelSheet'));
+  document.getElementById('sendChannelOverlay').addEventListener('click', () => closeSheet('sendChannelOverlay', 'sendChannelSheet'));
+
+  document.getElementById('sendChannelConfirm').addEventListener('click', async () => {
+    const selectedChannels = Array.from(document.querySelectorAll('[data-send-channel]:checked')).map(el => el.value);
+    if (!selectedChannels.length) { showToast('전송할 쇼핑몰을 하나 이상 선택해주세요'); return; }
+
+    const targets = currentOrders.filter(o =>
+      o['주문상태'] === '송장출력완료' && selectedChannels.includes(o['판매채널'] || '기타'));
+
+    closeSheet('sendChannelOverlay', 'sendChannelSheet');
 
     const btn = document.getElementById('bulkSendBtn');
     btn.disabled = true;
