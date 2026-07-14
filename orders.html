@@ -186,6 +186,7 @@
 <!-- 주문 상세 + 액션 바텀시트 -->
 <div class="sheet-overlay" id="sheetOverlay"></div>
 <div class="sheet" id="detailSheet">
+  <button class="sheet-close" onclick="closeSheet('sheetOverlay','detailSheet')">&times;</button>
   <div class="sheet-handle"></div>
   <h2 id="detailProduct">-</h2>
   <div class="sheet-sub" id="detailSub">-</div>
@@ -196,6 +197,7 @@
 <!-- 송장 출력(자동발급) 확인 바텀시트 -->
 <div class="sheet-overlay" id="shipOverlay"></div>
 <div class="sheet" id="shipSheet">
+  <button class="sheet-close" onclick="closeSheet('shipOverlay','shipSheet')">&times;</button>
   <div class="sheet-handle"></div>
   <h2>송장 출력</h2>
   <div class="sheet-sub">택배사(CJ대한통운)로 송장번호가 자동 발급되고, 인쇄용 라벨이 새 창에 열려요</div>
@@ -208,6 +210,7 @@
 <!-- 송장번호 채널 전송 확인 바텀시트 -->
 <div class="sheet-overlay" id="sendOverlay"></div>
 <div class="sheet" id="sendSheet">
+  <button class="sheet-close" onclick="closeSheet('sendOverlay','sendSheet')">&times;</button>
   <div class="sheet-handle"></div>
   <h2>송장번호 전송</h2>
   <div class="sheet-sub">해당 쇼핑몰(쿠팡/네이버 등)로 송장번호를 전송하고, 재고를 차감해요</div>
@@ -220,6 +223,7 @@
 <!-- 반품 접수 폼 바텀시트 -->
 <div class="sheet-overlay" id="returnOverlay"></div>
 <div class="sheet" id="returnSheet">
+  <button class="sheet-close" onclick="closeSheet('returnOverlay','returnSheet')">&times;</button>
   <div class="sheet-handle"></div>
   <h2>반품 접수</h2>
   <div class="sheet-sub">접수 후 반품 탭에서 진행상황을 관리할 수 있어요</div>
@@ -237,6 +241,7 @@
 <!-- 주문 직접 등록 바텀시트 -->
 <div class="sheet-overlay" id="addOrderOverlay"></div>
 <div class="sheet" id="addOrderSheet">
+  <button class="sheet-close" onclick="closeSheet('addOrderOverlay','addOrderSheet')">&times;</button>
   <div class="sheet-handle"></div>
   <h2>주문 직접 등록</h2>
   <div class="sheet-sub">전화주문, 직접판매 등록, 또는 API 연동 전 테스트용이에요</div>
@@ -264,6 +269,7 @@
 <!-- 취소 처리 폼 바텀시트 -->
 <div class="sheet-overlay" id="cancelOverlay"></div>
 <div class="sheet" id="cancelSheet">
+  <button class="sheet-close" onclick="closeSheet('cancelOverlay','cancelSheet')">&times;</button>
   <div class="sheet-handle"></div>
   <h2>취소 처리</h2>
   <div class="sheet-sub">발송 전 주문 취소예요. 재고는 아직 차감 전이라 복원할 필요 없어요</div>
