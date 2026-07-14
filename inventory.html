@@ -131,6 +131,10 @@
   <div class="field"><label>초기 재고수량</label><input type="number" id="pStock" value="0" min="0"></div>
   <div class="field"><label>안전재고 (이 이하면 부족 표시)</label><input type="number" id="pSafety" value="5" min="0"></div>
   <div class="field"><label>판매가</label><input type="number" id="pPrice" placeholder="원"></div>
+  <div class="field" style="display:flex; align-items:center; gap:8px;">
+    <input type="checkbox" id="pFresh" style="width:16px; height:16px;">
+    <label for="pFresh" style="margin:0; font-size:13px; color:var(--ink);">신선/냉장 배송 상품이에요 (CJ대한통운 신선 계약코드로 발송)</label>
+  </div>
   <div class="btn-row">
     <button class="btn btn-ghost" id="addCancel">취소</button>
     <button class="btn btn-primary" id="addSubmit">등록</button>
@@ -200,6 +204,7 @@
             <div class="product-name">${p['상품명']}</div>
             <div class="product-meta">${p['SKU'] ? 'SKU ' + p['SKU'] + ' · ' : ''}${p['카테고리ID'] || '미분류'}</div>
             ${isLow ? '<span class="low-badge">재고 부족</span>' : ''}
+            ${p['신선상품여부'] === 'Y' ? '<span class="low-badge" style="color:#1F8A70; background:#DCF3EC;">신선/냉장</span>' : ''}
           </div>
           <div class="product-stock">
             <div class="product-stock-value mono">${stock}</div>
@@ -297,7 +302,8 @@
         categoryId: document.getElementById('pCategory').value,
         initialStock: document.getElementById('pStock').value,
         safetyStock: document.getElementById('pSafety').value,
-        price: document.getElementById('pPrice').value
+        price: document.getElementById('pPrice').value,
+        isFresh: document.getElementById('pFresh').checked ? 'Y' : 'N'
       });
       if (res.error) throw new Error(res.error);
       showToast('상품이 등록됐어요');
@@ -305,6 +311,7 @@
       document.getElementById('pName').value = '';
       document.getElementById('pSku').value = '';
       document.getElementById('pStock').value = 0;
+      document.getElementById('pFresh').checked = false;
       loadProducts();
     } catch (e) {
       showToast('등록 실패: ' + e.message);
