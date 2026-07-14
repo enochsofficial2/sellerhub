@@ -90,6 +90,38 @@
   .site-group-header{font-size:12.5px; font-weight:800; color:var(--ink-mute); margin:16px 0 8px; display:flex; align-items:center; gap:8px;}
   .site-group-header:first-child{margin-top:0;}
   .site-group-header .badge{margin:0;}
+
+  /* ===== 데스크톱 테이블 뷰 (PC에서만 표시) ===== */
+  .order-table-wrap{display:none;}
+  @media (min-width: 900px) {
+    .order-table-wrap{display:block; background:var(--surface); border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+    #orderList{display:none;} /* 모바일 카드뷰는 PC에서 숨김 */
+  }
+  .order-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .order-table th{background:var(--bg); text-align:left; padding:10px 12px; font-weight:700; color:var(--ink-mute);
+    font-size:11.5px; white-space:nowrap; border-bottom:1px solid var(--line);}
+  .order-table td{padding:10px 12px; border-bottom:1px solid var(--bg); vertical-align:middle;}
+  .order-table tbody tr{cursor:pointer;}
+  .order-table tbody tr:hover{background:var(--bg);}
+  .order-table tbody tr:last-child td{border-bottom:0;}
+  .order-table .col-check{width:32px;}
+  .order-table .col-amount{text-align:right; font-weight:700; font-family:'IBM Plex Mono', monospace;}
+  .order-table .quick-ship-btn{padding:5px 10px; font-size:11px;}
+
+  .table-bulk-bar{display:none; align-items:center; justify-content:space-between; background:var(--navy); color:#fff;
+    padding:10px 14px; font-size:12.5px; font-weight:600;}
+  .table-bulk-bar.show{display:flex;}
+  .table-bulk-bar button{background:var(--amber); color:var(--navy); border:0; border-radius:8px; padding:6px 12px;
+    font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;}
+
+  .pagination-row{display:none; align-items:center; justify-content:space-between; margin-top:12px; font-size:12.5px; color:var(--ink-mute);}
+  @media (min-width: 900px) { .pagination-row{display:flex;} }
+  .pagination-row select{border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-family:inherit; font-size:12.5px; background:var(--surface);}
+  .pagination-nav{display:flex; align-items:center; gap:6px;}
+  .pagination-nav button{border:1px solid var(--line); background:var(--surface); border-radius:7px; width:28px; height:28px;
+    cursor:pointer; color:var(--ink); font-size:13px;}
+  .pagination-nav button:disabled{opacity:0.35; cursor:default;}
+  .pagination-nav .page-info{font-weight:700; color:var(--ink); min-width:60px; text-align:center;}
 </style>
 </head>
 <body>
@@ -141,6 +173,46 @@
         사이트별로 정리
       </button>
     </div>
+    <div class="order-table-wrap">
+      <div class="table-bulk-bar" id="tableBulkBar">
+        <span id="tableBulkCount">0건 선택됨</span>
+        <button id="tableBulkPrintBtn">선택 항목 송장출력</button>
+      </div>
+      <table class="order-table">
+        <thead>
+          <tr>
+            <th class="col-check"><input type="checkbox" id="selectAllCheck"></th>
+            <th>쇼핑몰</th>
+            <th>상태</th>
+            <th>상품명</th>
+            <th>수취인</th>
+            <th>수량</th>
+            <th class="col-amount">금액</th>
+            <th>주문일시</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="orderTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="pagination-row">
+      <div>
+        전체 <b id="paginationTotal">0</b>건
+        <select id="pageSizeSelect">
+          <option value="20">20개씩</option>
+          <option value="50">50개씩</option>
+          <option value="100">100개씩</option>
+          <option value="99999">전체보기</option>
+        </select>
+      </div>
+      <div class="pagination-nav">
+        <button id="pagePrevBtn">‹</button>
+        <span class="page-info" id="pageInfo">1 / 1</span>
+        <button id="pageNextBtn">›</button>
+      </div>
+    </div>
+
     <div id="orderList"><div class="skeleton" style="height:96px; margin-bottom:10px;"></div><div class="skeleton" style="height:96px;"></div></div>
   </main>
 
@@ -289,6 +361,9 @@
   let currentOrders = [];
   let activeOrderId = null;
   let groupBySite = false;
+  let currentPage = 1;
+  let pageSize = 20;
+  let selectedIds = new Set();
 
   async function loadOrders(status) {
     const refreshBtn = document.getElementById('refreshBtn');
@@ -301,6 +376,8 @@
       currentOrders = isUnsentFilter
         ? (data || []).filter(o => o['채널전송상태'] === '실패')
         : (data || []);
+      currentPage = 1;
+      selectedIds.clear();
 
       const newCount = currentOrders.filter(o => (o['주문상태'] || '신규') === '신규').length;
       const bulkBar = document.getElementById('bulkPrintBar');
@@ -352,35 +429,89 @@
     </div>`;
   }
 
+  function orderTableRowHtml(o) {
+    const d = o['주문일시'] ? new Date(o['주문일시']) : null;
+    const dateStr = d ? (d.getMonth()+1) + '.' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') : '';
+    const checked = selectedIds.has(o['주문ID']) ? 'checked' : '';
+    return `<tr data-order-id="${o['주문ID']}">
+      <td class="col-check"><input type="checkbox" class="row-check" data-row-check="${o['주문ID']}" ${checked}></td>
+      <td>${o['판매채널'] || '기타'}</td>
+      <td><span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
+        ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">미전송</span>' : ''}</td>
+      <td>${o['상품명'] || '-'}</td>
+      <td>${o['구매자명'] || '-'}</td>
+      <td>${formatWon(o['수량'])}개</td>
+      <td class="col-amount">${formatWon(o['판매가'])}원</td>
+      <td>${dateStr}</td>
+      <td>${o['주문상태'] === '신규' ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">송장출력</button>` : ''}</td>
+    </tr>`;
+  }
+
+  function getPagedOrders() {
+    const start = (currentPage - 1) * pageSize;
+    return currentOrders.slice(start, start + pageSize);
+  }
+
+  function updatePaginationUI() {
+    const total = currentOrders.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    document.getElementById('paginationTotal').textContent = total;
+    document.getElementById('pageInfo').textContent = currentPage + ' / ' + totalPages;
+    document.getElementById('pagePrevBtn').disabled = currentPage <= 1;
+    document.getElementById('pageNextBtn').disabled = currentPage >= totalPages;
+  }
+
+  function updateTableBulkBar() {
+    const bar = document.getElementById('tableBulkBar');
+    const n = selectedIds.size;
+    if (n > 0) {
+      bar.classList.add('show');
+      document.getElementById('tableBulkCount').textContent = n + '건 선택됨';
+    } else {
+      bar.classList.remove('show');
+    }
+    document.getElementById('selectAllCheck').checked = n > 0 && getPagedOrders().every(o => selectedIds.has(o['주문ID']));
+  }
+
   function renderOrderList() {
     const listEl = document.getElementById('orderList');
+    const tableBody = document.getElementById('orderTableBody');
 
     if (!currentOrders.length) {
-      listEl.innerHTML = `<div class="empty">
+      const emptyHtml = `<div class="empty">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
         <b>주문이 없어요</b>${currentStatus ? '이 상태의 주문이 아직 없어요' : '채널 연동이 완료되면 여기 자동으로 쌓여요'}
       </div>`;
+      listEl.innerHTML = emptyHtml;
+      tableBody.innerHTML = `<tr><td colspan="9" style="padding:30px; text-align:center; color:var(--ink-mute);">주문이 없어요</td></tr>`;
+      updatePaginationUI();
+      updateTableBulkBar();
       return;
     }
 
+    // 모바일 카드뷰
     if (!groupBySite) {
-      listEl.innerHTML = currentOrders.map(orderCardHtml).join('');
-      return;
+      listEl.innerHTML = getPagedOrders().map(orderCardHtml).join('');
+    } else {
+      const groups = {};
+      currentOrders.forEach(o => {
+        const ch = o['판매채널'] || '기타';
+        if (!groups[ch]) groups[ch] = [];
+        groups[ch].push(o);
+      });
+      listEl.innerHTML = Object.keys(groups).sort().map(ch => {
+        return `<div class="site-group-header">
+            <span class="${channelBadgeClass(ch)}">${ch}</span> ${groups[ch].length}건
+          </div>` + groups[ch].map(orderCardHtml).join('');
+      }).join('');
     }
 
-    // 사이트별로 그룹핑해서 섹션별로 보여주기
-    const groups = {};
-    currentOrders.forEach(o => {
-      const ch = o['판매채널'] || '기타';
-      if (!groups[ch]) groups[ch] = [];
-      groups[ch].push(o);
-    });
+    // PC 테이블뷰 (항상 페이지네이션된 목록 기준)
+    tableBody.innerHTML = getPagedOrders().map(orderTableRowHtml).join('');
 
-    listEl.innerHTML = Object.keys(groups).sort().map(ch => {
-      return `<div class="site-group-header">
-          <span class="${channelBadgeClass(ch)}">${ch}</span> ${groups[ch].length}건
-        </div>` + groups[ch].map(orderCardHtml).join('');
-    }).join('');
+    updatePaginationUI();
+    updateTableBulkBar();
   }
 
   document.getElementById('viewToggleBtn').addEventListener('click', () => {
@@ -389,6 +520,80 @@
     btn.classList.toggle('active', groupBySite);
     btn.lastChild.textContent = groupBySite ? ' 시간순으로 보기' : ' 사이트별로 정리';
     renderOrderList();
+  });
+
+  // 페이지네이션 컨트롤
+  document.getElementById('pageSizeSelect').addEventListener('change', (e) => {
+    pageSize = Number(e.target.value);
+    currentPage = 1;
+    renderOrderList();
+  });
+  document.getElementById('pagePrevBtn').addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; renderOrderList(); }
+  });
+  document.getElementById('pageNextBtn').addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(currentOrders.length / pageSize));
+    if (currentPage < totalPages) { currentPage++; renderOrderList(); }
+  });
+
+  // 테이블 체크박스 선택
+  document.getElementById('selectAllCheck').addEventListener('change', (e) => {
+    getPagedOrders().forEach(o => {
+      if (e.target.checked) selectedIds.add(o['주문ID']); else selectedIds.delete(o['주문ID']);
+    });
+    renderOrderList();
+  });
+
+  document.getElementById('orderTableBody').addEventListener('click', (e) => {
+    const check = e.target.closest('[data-row-check]');
+    if (check) {
+      e.stopPropagation();
+      const id = check.dataset.rowCheck;
+      if (check.checked) selectedIds.add(id); else selectedIds.delete(id);
+      updateTableBulkBar();
+      return;
+    }
+    const quickBtn = e.target.closest('[data-quick-ship]');
+    if (quickBtn) {
+      activeOrderId = quickBtn.dataset.quickShip;
+      openSheet('shipOverlay', 'shipSheet');
+      return;
+    }
+    const row = e.target.closest('tr[data-order-id]');
+    if (!row) return;
+    const order = currentOrders.find(o => o['주문ID'] === row.dataset.orderId);
+    if (!order) return;
+    activeOrderId = order['주문ID'];
+    showDetail(order);
+  });
+
+  document.getElementById('tableBulkPrintBtn').addEventListener('click', async () => {
+    const targets = currentOrders.filter(o => selectedIds.has(o['주문ID']) && o['주문상태'] === '신규');
+    if (!targets.length) { showToast('신규 상태인 주문만 선택해주세요'); return; }
+
+    const btn = document.getElementById('tableBulkPrintBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+
+    const issuedIds = [];
+    for (const o of targets) {
+      try {
+        const res = await callApi('issueInvoice', { orderId: o['주문ID'] });
+        if (!res.error) issuedIds.push(o['주문ID']);
+      } catch (e) {}
+    }
+
+    btn.disabled = false;
+    btn.textContent = '선택 항목 송장출력';
+
+    if (issuedIds.length) {
+      showToast(issuedIds.length + '건 출력됐어요');
+      window.open('print.html?orderIds=' + encodeURIComponent(issuedIds.join(',')), '_blank');
+      selectedIds.clear();
+      loadOrders(currentStatus);
+    } else {
+      showToast('출력에 실패했어요');
+    }
   });
 
   // 필터 탭
