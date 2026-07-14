@@ -853,7 +853,7 @@
   }
 
   function openPrintModal(query) {
-    document.getElementById('printModalFrame').src = 'print.html?' + query;
+    document.getElementById('printModalFrame').src = 'print.html?' + query + '&embedded=1';
     document.getElementById('printModalOverlay').classList.add('show');
   }
   document.getElementById('printModalCloseBtn').addEventListener('click', () => {
