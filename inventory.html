@@ -119,6 +119,7 @@
 <!-- 상품 등록 바텀시트 -->
 <div class="sheet-overlay" id="addOverlay"></div>
 <div class="sheet" id="addSheet">
+  <button class="sheet-close" onclick="closeSheet('addOverlay','addSheet')">&times;</button>
   <div class="sheet-handle"></div>
   <h2>상품 등록</h2>
   <div class="sheet-sub">등록하면 바로 재고관리 대상이 돼요</div>
@@ -139,6 +140,7 @@
 <!-- 재고 조정 바텀시트 -->
 <div class="sheet-overlay" id="adjustOverlay"></div>
 <div class="sheet" id="adjustSheet">
+  <button class="sheet-close" onclick="closeSheet('adjustOverlay','adjustSheet')">&times;</button>
   <div class="sheet-handle"></div>
   <h2 id="adjustProductName">-</h2>
   <div class="sheet-sub">현재 재고 <span id="adjustCurrentStock">0</span>개</div>
