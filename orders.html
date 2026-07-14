@@ -107,6 +107,7 @@
   .order-table .col-check{width:32px;}
   .order-table .col-amount{text-align:right; font-weight:700; font-family:'IBM Plex Mono', monospace;}
   .order-table .quick-ship-btn{padding:5px 10px; font-size:11px;}
+  .table-group-header-row td{background:var(--bg); font-size:12px; font-weight:700; color:var(--ink-mute); padding:8px 12px;}
   .delivery-check-btn{background:none; border:1px solid var(--line); color:var(--ink-mute); font-size:11px;
     font-weight:600; padding:4px 9px; border-radius:6px; cursor:pointer; font-family:inherit;}
   .delivery-check-btn:hover{border-color:var(--navy); color:var(--navy);}
@@ -527,11 +528,28 @@
       }).join('');
     }
 
-    // PC 테이블뷰 (항상 페이지네이션된 목록 기준)
-    tableBody.innerHTML = getPagedOrders().map(orderTableRowHtml).join('');
+    // PC 테이블뷰
+    if (!groupBySite) {
+      tableBody.innerHTML = getPagedOrders().map(orderTableRowHtml).join('');
+    } else {
+      // 그룹 보기일 땐 페이지네이션 없이 사이트별 섹션으로 전체 표시
+      const groups = {};
+      currentOrders.forEach(o => {
+        const ch = o['판매채널'] || '기타';
+        if (!groups[ch]) groups[ch] = [];
+        groups[ch].push(o);
+      });
+      tableBody.innerHTML = Object.keys(groups).sort().map(ch => {
+        const headerRow = `<tr class="table-group-header-row"><td colspan="13">
+          <span class="${channelBadgeClass(ch)}">${ch}</span> ${groups[ch].length}건
+        </td></tr>`;
+        return headerRow + groups[ch].map(orderTableRowHtml).join('');
+      }).join('');
+    }
 
     updatePaginationUI();
     updateTableBulkBar();
+    document.querySelector('.pagination-row').style.visibility = groupBySite ? 'hidden' : 'visible';
   }
 
   document.getElementById('viewToggleBtn').addEventListener('click', () => {
