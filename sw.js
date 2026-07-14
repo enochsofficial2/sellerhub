@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sellerhub-v17';
+const CACHE_NAME = 'sellerhub-v18';
 const CORE_ASSETS = ['./index.html', './orders.html', './inventory.html', './profile.html', './insights.html', './print.html', './style.css', './common.js', './manifest.json'];
 
 self.addEventListener('install', (event) => {
