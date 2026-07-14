@@ -83,6 +83,7 @@
   .collect-result{font-size:11.5px; color:var(--ink-mute); margin-top:8px; line-height:1.6;}
 
   .view-toggle-row{display:flex; justify-content:flex-end; gap:8px; margin-bottom:8px;}
+  @media (max-width: 899px) { #excelDownloadBtn{display:none !important;} }
   .view-toggle-btn{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:7px 12px;
     font-size:12px; font-weight:600; color:var(--ink-mute); cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px;}
   .view-toggle-btn.active{background:var(--navy); color:#fff; border-color:var(--navy);}
@@ -577,9 +578,10 @@
   }
 
   document.getElementById('excelDownloadBtn').addEventListener('click', () => {
-    if (!currentOrders.length) { showToast('다운로드할 주문이 없어요'); return; }
+    if (!selectedIds.size) { showToast('다운로드할 주문을 먼저 선택해주세요'); return; }
+    const targetOrders = currentOrders.filter(o => selectedIds.has(o['주문ID']));
 
-    const rows = currentOrders.map(o => ({
+    const rows = targetOrders.map(o => ({
       '쇼핑몰': o['판매채널'] || '기타',
       '상태': o['주문상태'] || '신규',
       '상품명': o['상품명'] || '',
@@ -601,7 +603,7 @@
     const label = document.querySelector('#filterTabs button.active')?.textContent || '주문';
     const dateStr = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `출고내역서_${label}_${dateStr}.xlsx`);
-    showToast('엑셀 다운로드 완료');
+    showToast(rows.length + '건 다운로드 완료');
   });
 
   document.getElementById('viewToggleBtn').addEventListener('click', () => {
