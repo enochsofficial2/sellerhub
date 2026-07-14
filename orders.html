@@ -134,6 +134,20 @@
 
   .copyable{cursor:pointer; border-bottom:1px dashed var(--ink-mute);}
   .copyable:hover{color:var(--navy); border-bottom-color:var(--navy);}
+
+  /* ===== 인쇄 미리보기 모달 (새창 대신 페이지 안에서 바로 뜸) ===== */
+  .print-modal-overlay{position:fixed; inset:0; background:rgba(10,15,25,0.75); z-index:200; display:none; align-items:center; justify-content:center;}
+  .print-modal-overlay.show{display:flex;}
+  .print-modal-box{background:#2b2f36; width:96vw; height:92vh; max-width:1100px; border-radius:10px; overflow:hidden;
+    display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+  .print-modal-toolbar{background:#1f2329; color:#fff; padding:10px 16px; display:flex; align-items:center; justify-content:space-between;}
+  .print-modal-toolbar .title{font-size:13px; font-weight:700; color:#cfd4dc;}
+  .print-modal-toolbar-actions{display:flex; gap:8px;}
+  .print-modal-btn{background:#3a3f47; color:#fff; border:0; border-radius:7px; padding:8px 14px; font-size:12.5px;
+    font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px;}
+  .print-modal-btn.primary{background:#E8A33D; color:#1a1f2e;}
+  .print-modal-frame-wrap{flex:1; background:#4a4f57; overflow:auto; padding:20px; display:flex; justify-content:center;}
+  .print-modal-frame-wrap iframe{background:#fff; width:100%; max-width:480px; height:100%; border:0; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,0.3);}
 </style>
 </head>
 <body>
@@ -171,16 +185,16 @@
 
     <div class="bulk-print-bar" id="bulkPrintBar" style="display:none;">
       <div class="bulk-print-bar-text">신규 주문 <b id="bulkPrintCount">0</b>건 - 상품명순으로 한번에 출력</div>
-      <div style="display:flex; gap:8px;">
-        <button class="bulk-print-btn" id="bulkPrintBtn">전체 출력</button>
-        <button class="bulk-print-btn" id="tableBulkPrintBtn" style="background:var(--surface); color:var(--navy);">
-          선택 항목 재출력<span id="tableBulkCount"></span>
-        </button>
-      </div>
+      <button class="bulk-print-btn" id="bulkPrintBtn">전체 출력</button>
     </div>
     <div class="bulk-print-bar" id="bulkSendBar" style="display:none;">
       <div class="bulk-print-bar-text">송장출력완료 <b id="bulkSendCount">0</b>건 - 채널로 한번에 전송</div>
-      <button class="bulk-print-btn" id="bulkSendBtn">일괄 전송</button>
+      <div style="display:flex; gap:8px;">
+        <button class="bulk-print-btn" id="tableBulkPrintBtn" style="background:var(--surface); color:var(--navy);">
+          선택 항목 재출력<span id="tableBulkCount"></span>
+        </button>
+        <button class="bulk-print-btn" id="bulkSendBtn">일괄 전송</button>
+      </div>
     </div>
     <div class="view-toggle-row">
       <button class="view-toggle-btn" id="excelDownloadBtn" style="display:none;">
@@ -389,6 +403,22 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- 인쇄 미리보기 모달 -->
+<div class="print-modal-overlay" id="printModalOverlay">
+  <div class="print-modal-box">
+    <div class="print-modal-toolbar">
+      <span class="title">송장 출력 미리보기</span>
+      <div class="print-modal-toolbar-actions">
+        <button class="print-modal-btn primary" id="printModalPrintBtn">🖨 인쇄하기</button>
+        <button class="print-modal-btn" id="printModalCloseBtn">닫기</button>
+      </div>
+    </div>
+    <div class="print-modal-frame-wrap">
+      <iframe id="printModalFrame"></iframe>
+    </div>
+  </div>
+</div>
+
 <script src="common.js"></script>
 <script>
   let currentStatus = '신규';
@@ -709,7 +739,7 @@
 
     if (printIds.length) {
       showToast(printIds.length + '건 출력됐어요');
-      window.open('print.html?orderIds=' + encodeURIComponent(printIds.join(',')), '_blank');
+      openPrintModal('orderIds=' + encodeURIComponent(printIds.join(',')));
       selectedIds.clear();
       loadOrders(currentStatus);
     } else {
@@ -754,7 +784,7 @@
 
     if (!issuedIds.length) { showToast('발급에 실패했어요'); return; }
     showToast(issuedIds.length + '건 발급 완료' + (failCount ? ` (${failCount}건 실패)` : ''));
-    window.open('print.html?orderIds=' + encodeURIComponent(issuedIds.join(',')), '_blank');
+    openPrintModal('orderIds=' + encodeURIComponent(issuedIds.join(',')));
     loadOrders(currentStatus);
   });
 
@@ -822,6 +852,19 @@
     document.getElementById(sheetId).classList.remove('show');
   }
 
+  function openPrintModal(query) {
+    document.getElementById('printModalFrame').src = 'print.html?' + query;
+    document.getElementById('printModalOverlay').classList.add('show');
+  }
+  document.getElementById('printModalCloseBtn').addEventListener('click', () => {
+    document.getElementById('printModalOverlay').classList.remove('show');
+    document.getElementById('printModalFrame').src = '';
+  });
+  document.getElementById('printModalPrintBtn').addEventListener('click', () => {
+    const frame = document.getElementById('printModalFrame');
+    try { frame.contentWindow.print(); } catch (e) {}
+  });
+
   document.getElementById('orderList').addEventListener('click', (e) => {
     // 빠른 송장등록 버튼을 눌렀으면 상세 팝업을 열지 않고 바로 송장 폼으로
     const quickBtn = e.target.closest('[data-quick-ship]');
@@ -882,6 +925,7 @@
       <div class="detail-row"><span>연락처</span><span>${o['구매자연락처']||'-'}</span></div>
       <div class="detail-row"><span>배송지</span><span>${o['구매자주소']||'-'}</span></div>
       <div class="detail-row"><span>수량 / 금액</span><span>${formatWon(o['수량'])}개 · ${formatWon(o['판매가'])}원</span></div>
+      ${o['상품링크'] ? `<div class="detail-row"><span>상품페이지</span><span><a href="${o['상품링크']}" target="_blank" rel="noopener" style="color:var(--navy); text-decoration:underline;">바로가기 →</a></span></div>` : ''}
       ${itemsHtml}
       <div class="detail-row"><span>현재 상태</span><span>${o['주문상태']||'신규'}</span></div>
       ${o['채널전송상태'] ? `<div class="detail-row"><span>채널 전송</span><span style="color:${o['채널전송상태']==='실패' ? 'var(--danger)' : 'inherit'}">${o['채널전송상태']}</span></div>` : ''}
@@ -921,7 +965,7 @@
 
     const printBtn = document.getElementById('btnPrintLabel');
     if (printBtn) printBtn.addEventListener('click', () => {
-      window.open('print.html?orderId=' + encodeURIComponent(o['주문ID']), '_blank');
+      openPrintModal('orderId=' + encodeURIComponent(o['주문ID']));
     });
 
     const deliveryBtn = document.getElementById('btnCheckDelivery');
@@ -1050,7 +1094,7 @@
         ? ('송장번호 발급 완료: ' + res.trackingNo)
         : ('임시 송장번호 발급: ' + res.trackingNo + ' (CJ API 연동 전)'));
       closeSheet('shipOverlay', 'shipSheet');
-      window.open('print.html?orderId=' + encodeURIComponent(activeOrderId), '_blank');
+      openPrintModal('orderId=' + encodeURIComponent(activeOrderId));
       loadOrders(currentStatus);
     } catch (e) {
       showToast('처리 실패: ' + e.message);
