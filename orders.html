@@ -82,7 +82,7 @@
   .collect-run-btn:disabled{opacity:0.5;}
   .collect-result{font-size:11.5px; color:var(--ink-mute); margin-top:8px; line-height:1.6;}
 
-  .view-toggle-row{display:flex; justify-content:flex-end; margin-bottom:8px;}
+  .view-toggle-row{display:flex; justify-content:flex-end; gap:8px; margin-bottom:8px;}
   .view-toggle-btn{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:7px 12px;
     font-size:12px; font-weight:600; color:var(--ink-mute); cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px;}
   .view-toggle-btn.active{background:var(--navy); color:#fff; border-color:var(--navy);}
@@ -177,6 +177,10 @@
       <button class="bulk-print-btn" id="bulkSendBtn">일괄 전송</button>
     </div>
     <div class="view-toggle-row">
+      <button class="view-toggle-btn" id="excelDownloadBtn" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        출고내역서 다운로드
+      </button>
       <button class="view-toggle-btn" id="viewToggleBtn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         사이트별로 정리
@@ -185,7 +189,7 @@
     <div class="order-table-wrap">
       <div class="table-bulk-bar" id="tableBulkBar">
         <span id="tableBulkCount">0건 선택됨</span>
-        <button id="tableBulkPrintBtn">선택 항목 송장출력</button>
+        <button id="tableBulkPrintBtn">선택 항목 송장 재출력</button>
       </div>
       <table class="order-table">
         <thead>
@@ -382,6 +386,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="common.js"></script>
 <script>
   let currentStatus = '신규';
@@ -427,6 +432,9 @@
       } else {
         bulkSendBar.style.display = 'none';
       }
+
+      const excelEligible = ['신규', '송장출력완료', '발송완료', '__unsent__'].includes(status);
+      document.getElementById('excelDownloadBtn').style.display = excelEligible ? 'flex' : 'none';
 
       renderOrderList();
     } catch (e) {
@@ -568,6 +576,34 @@
     document.querySelector('.pagination-row').style.visibility = groupBySite ? 'hidden' : 'visible';
   }
 
+  document.getElementById('excelDownloadBtn').addEventListener('click', () => {
+    if (!currentOrders.length) { showToast('다운로드할 주문이 없어요'); return; }
+
+    const rows = currentOrders.map(o => ({
+      '쇼핑몰': o['판매채널'] || '기타',
+      '상태': o['주문상태'] || '신규',
+      '상품명': o['상품명'] || '',
+      '수취인': o['구매자명'] || '',
+      '연락처': o['구매자연락처'] || '',
+      '주소': o['구매자주소'] || '',
+      '수량': o['수량'] || 0,
+      '금액': o['판매가'] || 0,
+      '주문일시': o['주문일시'] || '',
+      '택배사': o['송장_택배사'] || '',
+      '송장번호': o['송장_송장번호'] || '',
+      '주문번호': o['채널주문번호'] || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '출고내역서');
+
+    const label = document.querySelector('#filterTabs button.active')?.textContent || '주문';
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `출고내역서_${label}_${dateStr}.xlsx`);
+    showToast('엑셀 다운로드 완료');
+  });
+
   document.getElementById('viewToggleBtn').addEventListener('click', () => {
     groupBySite = !groupBySite;
     const btn = document.getElementById('viewToggleBtn');
@@ -649,27 +685,33 @@
   });
 
   document.getElementById('tableBulkPrintBtn').addEventListener('click', async () => {
-    const targets = currentOrders.filter(o => selectedIds.has(o['주문ID']) && o['주문상태'] === '신규');
-    if (!targets.length) { showToast('신규 상태인 주문만 선택해주세요'); return; }
+    const targets = currentOrders.filter(o => selectedIds.has(o['주문ID']));
+    if (!targets.length) { showToast('출력할 주문을 선택해주세요'); return; }
 
     const btn = document.getElementById('tableBulkPrintBtn');
     btn.disabled = true;
     btn.textContent = '처리 중...';
 
-    const issuedIds = [];
+    const printIds = [];
     for (const o of targets) {
-      try {
-        const res = await callApi('issueInvoice', { orderId: o['주문ID'] });
-        if (!res.error) issuedIds.push(o['주문ID']);
-      } catch (e) {}
+      if (o['주문상태'] === '신규') {
+        // 아직 송장이 없는 신규 주문은 새로 발급
+        try {
+          const res = await callApi('issueInvoice', { orderId: o['주문ID'] });
+          if (!res.error) printIds.push(o['주문ID']);
+        } catch (e) {}
+      } else {
+        // 이미 송장이 있으면 새로 발급하지 않고 그대로 재출력
+        printIds.push(o['주문ID']);
+      }
     }
 
     btn.disabled = false;
-    btn.textContent = '선택 항목 송장출력';
+    btn.textContent = '선택 항목 송장 재출력';
 
-    if (issuedIds.length) {
-      showToast(issuedIds.length + '건 출력됐어요');
-      window.open('print.html?orderIds=' + encodeURIComponent(issuedIds.join(',')), '_blank');
+    if (printIds.length) {
+      showToast(printIds.length + '건 출력됐어요');
+      window.open('print.html?orderIds=' + encodeURIComponent(printIds.join(',')), '_blank');
       selectedIds.clear();
       loadOrders(currentStatus);
     } else {
