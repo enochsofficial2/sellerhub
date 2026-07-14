@@ -6,41 +6,55 @@
 <title>송장 출력 - 셀러허브</title>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <style>
-  :root{ --navy:#0F1B2E; --ink:#12192B; --ink-mute:#5C6478; --line:#DCE1E9; --amber:#E8A33D; }
+  :root{ --navy:#0F1B2E; --ink:#12192B; --ink-mute:#5C6478; --line:#9AA3AF; --amber:#E8A33D; --accent:#1B5FAE; }
   *{box-sizing:border-box;}
   body{margin:0; font-family:'Pretendard', sans-serif; background:#EEF1F5; color:var(--ink); padding:16px;}
-  .toolbar{max-width:400px; margin:0 auto 14px; display:flex; gap:8px;}
+  .toolbar{max-width:420px; margin:0 auto 14px; display:flex; gap:8px;}
   .toolbar button{flex:1; border:0; border-radius:10px; padding:12px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;}
   .btn-print{background:var(--navy); color:#fff;}
-  .btn-back{background:#fff; color:var(--ink); border:1px solid var(--line) !important;}
+  .btn-back{background:#fff; color:var(--ink); border:1px solid #DCE1E9 !important;}
+  .batch-note{max-width:420px; margin:0 auto 14px; font-size:12px; color:var(--ink-mute); text-align:center;}
 
-  .label{max-width:400px; margin:0 auto; background:#fff; border:2px solid var(--navy); border-radius:12px; padding:20px; }
-  .label-header{display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--navy); padding-bottom:10px; margin-bottom:14px;}
-  .label-brand{font-size:13px; font-weight:800; letter-spacing:0.05em;}
-  .label-channel{font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px; background:var(--amber); color:#fff;}
+  /* ===== 택배 송장 스타일 라벨 ===== */
+  .label{max-width:420px; margin:0 auto; background:#fff; border:2px solid var(--ink); font-size:12px;}
+  .label-topbar{display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:2px solid var(--ink); background:#F4F6F8;}
+  .label-brand{font-size:12px; font-weight:800; letter-spacing:0.03em;}
+  .label-carrier{font-size:12px; font-weight:800; color:var(--accent);}
 
-  .label-section{margin-bottom:14px;}
-  .label-section-title{font-size:10.5px; color:var(--ink-mute); font-weight:700; margin-bottom:4px; letter-spacing:0.05em;}
-  .label-name{font-size:17px; font-weight:800;}
-  .label-detail{font-size:13px; color:var(--ink); margin-top:2px; line-height:1.5;}
+  .barcode-zone{padding:12px; text-align:center; border-bottom:2px solid var(--ink);}
+  .barcode-zone svg{max-width:100%; height:52px;}
+  .barcode-number{font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:700; letter-spacing:0.05em; margin-top:2px;}
+  .barcode-caption{font-size:9.5px; color:var(--ink-mute); margin-top:2px;}
+  .barcode-caption.temp{color:#B45309; font-weight:700;}
 
-  .label-divider{border-top:1px dashed var(--line); margin:14px 0;}
+  .addr-row{display:flex; border-bottom:1px solid var(--line);}
+  .addr-cell{flex:1; padding:10px 12px;}
+  .addr-cell + .addr-cell{border-left:1px solid var(--line);}
+  .addr-label{font-size:9.5px; color:#fff; background:var(--ink); display:inline-block; padding:1.5px 7px; border-radius:3px; font-weight:700; margin-bottom:5px;}
+  .addr-name{font-size:14.5px; font-weight:800;}
+  .addr-detail{font-size:11.5px; color:var(--ink); margin-top:2px; line-height:1.5;}
 
-  .label-product{font-size:14px; font-weight:700;}
-  .label-product-meta{font-size:12px; color:var(--ink-mute); margin-top:2px;}
+  .product-row{padding:10px 12px; border-bottom:1px solid var(--line);}
+  .product-row .addr-label{background:var(--accent);}
+  .product-name{font-size:13px; font-weight:700; margin-top:5px;}
+  .product-meta{font-size:11px; color:var(--ink-mute); margin-top:2px;}
 
-  .label-invoice{background:#F5F3EE; border-radius:10px; padding:12px 14px; margin-top:6px;}
-  .label-invoice-row{display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0;}
-  .label-invoice-row span:first-child{color:var(--ink-mute);}
-  .label-invoice-row span:last-child{font-weight:800; font-family:'IBM Plex Mono', monospace;}
+  .perforation{position:relative; height:0; border-top:2px dashed #B0B6BE; margin:0;}
+  .perforation::before{content:"✂ 절취선"; position:absolute; left:50%; top:-8px; transform:translateX(-50%);
+    background:#EEF1F5; font-size:9px; color:var(--ink-mute); padding:0 6px;}
 
-  .loading, .error-box{max-width:400px; margin:40px auto; text-align:center; color:var(--ink-mute); font-size:13px;}
+  .stub{padding:10px 12px; display:flex; justify-content:space-between; align-items:center;}
+  .stub-label{font-size:10.5px; color:var(--ink-mute);}
+  .stub-value{font-size:12px; font-weight:700;}
+
+  .loading, .error-box{max-width:420px; margin:40px auto; text-align:center; color:var(--ink-mute); font-size:13px;}
 
   @media print {
     body{background:#fff; padding:0;}
-    .toolbar{display:none;}
-    .label{border:1.5px solid #000; box-shadow:none; page-break-inside:avoid;}
+    .toolbar, .batch-note{display:none;}
+    .label{border:1.5px solid #000; page-break-inside:avoid; margin-bottom:0;}
   }
 </style>
 </head>
@@ -59,44 +73,66 @@
     return new URLSearchParams(window.location.search).get(name);
   }
 
-  function renderLabel(order, store) {
+  function renderLabel(order, store, idx) {
+    const trackingNo = String(order['송장_송장번호'] || '');
+    const isTemp = trackingNo.indexOf('999') === 0;
+    const carrier = order['송장_택배사'] || '택배사 미지정';
+    const barcodeId = 'barcode_' + idx;
+
     return `
       <div class="label">
-        <div class="label-header">
-          <div class="label-brand">SELLER HUB 송장</div>
-          <div class="label-channel">${order['판매채널'] || '기타'}</div>
+        <div class="label-topbar">
+          <div class="label-brand">SELLER HUB 통합 송장</div>
+          <div class="label-carrier">${carrier}</div>
         </div>
 
-        <div class="label-section">
-          <div class="label-section-title">받는사람</div>
-          <div class="label-name">${order['구매자명'] || '-'}</div>
-          <div class="label-detail">${order['구매자연락처'] || '-'}</div>
-          <div class="label-detail">${order['구매자주소'] || '-'}</div>
+        <div class="barcode-zone">
+          <svg id="${barcodeId}"></svg>
+          <div class="barcode-number">${trackingNo || '-'}</div>
+          ${isTemp ? '<div class="barcode-caption temp">⚠ 임시번호 (실제 접수 시 택배사 번호로 교체 필요)</div>' : '<div class="barcode-caption">운송장번호</div>'}
         </div>
 
-        <div class="label-divider"></div>
-
-        <div class="label-section">
-          <div class="label-section-title">보내는사람</div>
-          <div class="label-name">${store.name || '(내정보에서 출고지 정보를 설정해주세요)'}</div>
-          <div class="label-detail">${store.phone || ''}</div>
-          <div class="label-detail">${store.address || ''}</div>
+        <div class="addr-row">
+          <div class="addr-cell">
+            <span class="addr-label">받는분</span>
+            <div class="addr-name">${order['구매자명'] || '-'}</div>
+            <div class="addr-detail">${order['구매자연락처'] || '-'}</div>
+            <div class="addr-detail">${order['구매자주소'] || '-'}</div>
+          </div>
+          <div class="addr-cell">
+            <span class="addr-label">보내는분</span>
+            <div class="addr-name">${store.name || '(미설정)'}</div>
+            <div class="addr-detail">${store.phone || ''}</div>
+            <div class="addr-detail">${store.address || ''}</div>
+          </div>
         </div>
 
-        <div class="label-divider"></div>
-
-        <div class="label-section">
-          <div class="label-section-title">상품정보</div>
-          <div class="label-product">${order['상품명'] || '-'}</div>
-          <div class="label-product-meta">수량 ${order['수량'] || 0}개 · 주문번호 ${order['채널주문번호'] || '-'}</div>
+        <div class="product-row">
+          <span class="addr-label">상품정보</span>
+          <div class="product-name">${order['상품명'] || '-'} 외 ${order['수량'] || 0}개</div>
+          <div class="product-meta">채널: ${order['판매채널'] || '기타'} · 주문번호 ${order['채널주문번호'] || '-'}</div>
         </div>
 
-        <div class="label-invoice">
-          <div class="label-invoice-row"><span>택배사</span><span>${order['송장_택배사'] || '-'}</span></div>
-          <div class="label-invoice-row"><span>송장번호</span><span>${order['송장_송장번호'] || '-'}</span></div>
+        <div class="perforation"></div>
+
+        <div class="stub">
+          <div class="stub-label">수령인 확인용 (Copy)</div>
+          <div class="stub-value">${trackingNo || '-'}</div>
         </div>
       </div>
     `;
+  }
+
+  function drawBarcodes(orders) {
+    orders.forEach((o, idx) => {
+      const trackingNo = String(o['송장_송장번호'] || '');
+      if (!trackingNo) return;
+      try {
+        JsBarcode('#barcode_' + idx, trackingNo, {
+          format: 'CODE128', width: 1.6, height: 45, displayValue: false, margin: 0
+        });
+      } catch (e) { /* 바코드로 표현 불가한 값이면 조용히 스킵 */ }
+    });
   }
 
   async function render() {
@@ -118,13 +154,13 @@
       validOrders.sort((a, b) => String(a['상품명'] || '').localeCompare(String(b['상품명'] || ''), 'ko'));
 
       contentEl.className = '';
-      if (validOrders.length > 1) {
-        contentEl.innerHTML = `<div style="max-width:400px; margin:0 auto 14px; font-size:12px; color:#5C6478; text-align:center;">
-          총 ${validOrders.length}건 · 상품명순 정렬됨
-        </div>` + validOrders.map(o => renderLabel(o, store)).join('<div style="height:14px;"></div>');
-      } else {
-        contentEl.innerHTML = renderLabel(validOrders[0], store);
-      }
+      const batchNote = validOrders.length > 1
+        ? `<div class="batch-note">총 ${validOrders.length}건 · 상품명순 정렬됨</div>` : '';
+
+      contentEl.innerHTML = batchNote + validOrders.map((o, i) => renderLabel(o, store, i))
+        .join('<div style="height:14px;"></div>');
+
+      drawBarcodes(validOrders);
     } catch (e) {
       contentEl.className = 'error-box';
       contentEl.innerHTML = '불러오기 실패: ' + e.message;
