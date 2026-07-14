@@ -26,11 +26,6 @@ html,body{margin:0; padding:0; background:var(--bg); color:var(--ink);
 .app{max-width:520px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column;
   padding-bottom: calc(72px + env(safe-area-inset-bottom));}
 
-@media (min-width: 900px) {
-  .app{max-width:1100px;}
-  nav.bottom .bottom-inner{max-width:1100px;}
-}
-
 header.top{background:var(--navy); color:#fff; padding: calc(20px + env(safe-area-inset-top)) 20px 22px;
   border-radius: 0 0 22px 22px; position:relative; overflow:hidden;}
 header.top::after{content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px;
