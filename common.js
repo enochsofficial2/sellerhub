@@ -64,3 +64,43 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+
+// ============================================
+// 다크모드 (모든 화면 공통 - localStorage로 기기별 저장)
+// ============================================
+(function () {
+  function applyTheme(theme) {
+    if (theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }
+
+  const saved = localStorage.getItem('sellerhub_theme') || 'light';
+  applyTheme(saved);
+
+  function iconFor(theme) {
+    return theme === 'dark'
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const btn = document.createElement('button');
+    btn.className = 'theme-toggle-btn';
+    btn.setAttribute('aria-label', '다크모드 전환');
+    const current = localStorage.getItem('sellerhub_theme') || 'light';
+    btn.innerHTML = iconFor(current);
+
+    btn.addEventListener('click', () => {
+      const now = localStorage.getItem('sellerhub_theme') || 'light';
+      const next = now === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('sellerhub_theme', next);
+      applyTheme(next);
+      btn.innerHTML = iconFor(next);
+    });
+
+    document.body.appendChild(btn);
+  });
+})();
