@@ -778,11 +778,30 @@
     document.getElementById('detailSub').innerHTML =
       `<span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널']||'기타'}</span> · 주문번호 ${o['채널주문번호']||'-'}`;
 
+    let itemsHtml = '';
+    if (o['품목목록JSON']) {
+      try {
+        const items = JSON.parse(o['품목목록JSON']);
+        if (items.length > 1) {
+          itemsHtml = `<div class="detail-row" style="flex-direction:column; align-items:flex-start;">
+            <span style="margin-bottom:6px;">담긴 상품 (${items.length}개)</span>
+            <div style="width:100%;">
+              ${items.map(it => `<div style="display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0;">
+                <span>${it.productName} ${it.sku ? '(' + it.sku + ')' : ''}</span>
+                <span>${formatWon(it.quantity)}개 · ${formatWon(it.price)}원</span>
+              </div>`).join('')}
+            </div>
+          </div>`;
+        }
+      } catch (e) {}
+    }
+
     document.getElementById('detailBody').innerHTML = `
       <div class="detail-row"><span>구매자</span><span>${o['구매자명']||'-'}</span></div>
       <div class="detail-row"><span>연락처</span><span>${o['구매자연락처']||'-'}</span></div>
       <div class="detail-row"><span>배송지</span><span>${o['구매자주소']||'-'}</span></div>
       <div class="detail-row"><span>수량 / 금액</span><span>${formatWon(o['수량'])}개 · ${formatWon(o['판매가'])}원</span></div>
+      ${itemsHtml}
       <div class="detail-row"><span>현재 상태</span><span>${o['주문상태']||'신규'}</span></div>
       ${o['채널전송상태'] ? `<div class="detail-row"><span>채널 전송</span><span style="color:${o['채널전송상태']==='실패' ? 'var(--danger)' : 'inherit'}">${o['채널전송상태']}</span></div>` : ''}
       <div id="deliveryStatusRow"></div>
