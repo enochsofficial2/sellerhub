@@ -107,6 +107,9 @@
   .order-table .col-check{width:32px;}
   .order-table .col-amount{text-align:right; font-weight:700; font-family:'IBM Plex Mono', monospace;}
   .order-table .quick-ship-btn{padding:5px 10px; font-size:11px;}
+  .delivery-check-btn{background:none; border:1px solid var(--line); color:var(--ink-mute); font-size:11px;
+    font-weight:600; padding:4px 9px; border-radius:6px; cursor:pointer; font-family:inherit;}
+  .delivery-check-btn:hover{border-color:var(--navy); color:var(--navy);}
 
   .table-bulk-bar{display:none; align-items:center; justify-content:space-between; background:var(--navy); color:#fff;
     padding:10px 14px; font-size:12.5px; font-weight:600;}
@@ -189,6 +192,8 @@
             <th>수량</th>
             <th class="col-amount">금액</th>
             <th>주문일시</th>
+            <th>송장번호</th>
+            <th>배송현황</th>
             <th></th>
           </tr>
         </thead>
@@ -443,6 +448,10 @@
       <td>${formatWon(o['수량'])}개</td>
       <td class="col-amount">${formatWon(o['판매가'])}원</td>
       <td>${dateStr}</td>
+      <td class="mono">${o['송장_송장번호'] || '-'}</td>
+      <td class="delivery-status-cell" data-order-id-status="${o['주문ID']}">
+        ${o['송장_송장번호'] ? `<button class="delivery-check-btn" data-check-delivery="${o['주문ID']}">조회</button>` : '-'}
+      </td>
       <td>${o['주문상태'] === '신규' ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">송장출력</button>` : ''}</td>
     </tr>`;
   }
@@ -484,7 +493,7 @@
         <b>주문이 없어요</b>${currentStatus ? '이 상태의 주문이 아직 없어요' : '채널 연동이 완료되면 여기 자동으로 쌓여요'}
       </div>`;
       listEl.innerHTML = emptyHtml;
-      tableBody.innerHTML = `<tr><td colspan="9" style="padding:30px; text-align:center; color:var(--ink-mute);">주문이 없어요</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="11" style="padding:30px; text-align:center; color:var(--ink-mute);">주문이 없어요</td></tr>`;
       updatePaginationUI();
       updateTableBulkBar();
       return;
@@ -544,13 +553,28 @@
     renderOrderList();
   });
 
-  document.getElementById('orderTableBody').addEventListener('click', (e) => {
+  document.getElementById('orderTableBody').addEventListener('click', async (e) => {
     const check = e.target.closest('[data-row-check]');
     if (check) {
       e.stopPropagation();
       const id = check.dataset.rowCheck;
       if (check.checked) selectedIds.add(id); else selectedIds.delete(id);
       updateTableBulkBar();
+      return;
+    }
+    const deliveryBtn = e.target.closest('[data-check-delivery]');
+    if (deliveryBtn) {
+      e.stopPropagation();
+      const orderId = deliveryBtn.dataset.checkDelivery;
+      deliveryBtn.disabled = true;
+      deliveryBtn.textContent = '...';
+      try {
+        const res = await callApi('getDeliveryStatus', { orderId });
+        const cell = deliveryBtn.closest('td');
+        cell.textContent = res.error ? '조회 실패' : (res.available ? res.status : res.message);
+      } catch (err) {
+        deliveryBtn.textContent = '조회 실패';
+      }
       return;
     }
     const quickBtn = e.target.closest('[data-quick-ship]');
