@@ -61,6 +61,35 @@
     #orderList{display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:10px; align-items:start;}
     #orderList .order-card{margin-bottom:0;}
   }
+
+  .collect-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:12px;}
+  .collect-header{display:flex; justify-content:space-between; align-items:center; cursor:pointer;}
+  .collect-title{font-size:13px; font-weight:800; display:flex; align-items:center; gap:7px;}
+  .collect-title svg{color:var(--amber);}
+  .collect-toggle-icon{color:var(--ink-mute); transition:transform .2s;}
+  .collect-toggle-icon.open{transform:rotate(180deg);}
+  .collect-body{max-height:0; overflow:hidden; transition:max-height .25s ease;}
+  .collect-body.open{max-height:400px; margin-top:12px;}
+  .collect-channel-row{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--bg);}
+  .collect-channel-row:last-child{border-bottom:0;}
+  .collect-channel-row input{width:16px; height:16px;}
+  .collect-channel-name{flex:1; font-size:13px; font-weight:600;}
+  .collect-channel-badge{font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px;}
+  .collect-channel-badge.on{background:var(--success-soft); color:var(--success);}
+  .collect-channel-badge.off{background:#E7E9EE; color:var(--ink-mute);}
+  .collect-run-btn{width:100%; margin-top:10px; background:var(--navy); color:#fff; border:0; border-radius:9px;
+    padding:11px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;}
+  .collect-run-btn:disabled{opacity:0.5;}
+  .collect-result{font-size:11.5px; color:var(--ink-mute); margin-top:8px; line-height:1.6;}
+
+  .view-toggle-row{display:flex; justify-content:flex-end; margin-bottom:8px;}
+  .view-toggle-btn{background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:7px 12px;
+    font-size:12px; font-weight:600; color:var(--ink-mute); cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:5px;}
+  .view-toggle-btn.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+
+  .site-group-header{font-size:12.5px; font-weight:800; color:var(--ink-mute); margin:16px 0 8px; display:flex; align-items:center; gap:8px;}
+  .site-group-header:first-child{margin-top:0;}
+  .site-group-header .badge{margin:0;}
 </style>
 </head>
 <body>
@@ -83,6 +112,21 @@
   </header>
 
   <main>
+    <div class="collect-card">
+      <div class="collect-header" id="collectHeader">
+        <div class="collect-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          주문 수집
+        </div>
+        <svg class="collect-toggle-icon" id="collectToggleIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="collect-body" id="collectBody">
+        <div id="collectChannelList"><div class="skeleton" style="height:40px;"></div></div>
+        <button class="collect-run-btn" id="collectRunBtn">선택한 사이트에서 수집하기</button>
+        <div class="collect-result" id="collectResult"></div>
+      </div>
+    </div>
+
     <div class="bulk-print-bar" id="bulkPrintBar" style="display:none;">
       <div class="bulk-print-bar-text">신규 주문 <b id="bulkPrintCount">0</b>건 - 상품명순으로 한번에 출력</div>
       <button class="bulk-print-btn" id="bulkPrintBtn">전체 출력</button>
@@ -90,6 +134,12 @@
     <div class="bulk-print-bar" id="bulkSendBar" style="display:none;">
       <div class="bulk-print-bar-text">송장출력완료 <b id="bulkSendCount">0</b>건 - 채널로 한번에 전송</div>
       <button class="bulk-print-btn" id="bulkSendBtn">일괄 전송</button>
+    </div>
+    <div class="view-toggle-row">
+      <button class="view-toggle-btn" id="viewToggleBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        사이트별로 정리
+      </button>
     </div>
     <div id="orderList"><div class="skeleton" style="height:96px; margin-bottom:10px;"></div><div class="skeleton" style="height:96px;"></div></div>
   </main>
@@ -232,6 +282,7 @@
   let currentStatus = '';
   let currentOrders = [];
   let activeOrderId = null;
+  let groupBySite = false;
 
   async function loadOrders(status) {
     const refreshBtn = document.getElementById('refreshBtn');
@@ -256,50 +307,83 @@
 
       const issuedCount = currentOrders.filter(o => o['주문상태'] === '송장출력완료').length;
       const bulkSendBar = document.getElementById('bulkSendBar');
-      if (issuedCount > 0) {
+      if (issuedCount > 0 && status === '송장출력완료') {
         bulkSendBar.style.display = 'flex';
         document.getElementById('bulkSendCount').textContent = issuedCount;
       } else {
         bulkSendBar.style.display = 'none';
       }
 
-      if (!currentOrders.length) {
-        listEl.innerHTML = `<div class="empty">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
-          <b>주문이 없어요</b>${status ? '이 상태의 주문이 아직 없어요' : '채널 연동이 완료되면 여기 자동으로 쌓여요'}
-        </div>`;
-        return;
-      }
-
-      listEl.innerHTML = currentOrders.map(o => {
-        const d = o['주문일시'] ? new Date(o['주문일시']) : null;
-        const dateStr = d ? (d.getMonth()+1) + '.' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') : '';
-        return `<div class="order-card" data-order-id="${o['주문ID']}">
-          <div class="order-top">
-            <span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널'] || '기타'}</span>
-            <span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
-            ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">송장미전송</span>' : ''}
-            <span class="order-date">${dateStr}</span>
-          </div>
-          <div class="order-product">${o['상품명'] || '-'}</div>
-          <div class="order-meta">
-            <span>수량 <b>${formatWon(o['수량'])}개</b></span>
-            <span>구매자 <b>${o['구매자명'] || '-'}</b></span>
-          </div>
-          <div class="order-bottom">
-            <span class="order-amount mono">${formatWon(o['판매가'])}원</span>
-            ${o['주문상태'] === '신규'
-              ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">바로 송장출력</button>`
-              : ``}
-          </div>
-        </div>`;
-      }).join('');
+      renderOrderList();
     } catch (e) {
       showToast('불러오기 실패: ' + e.message);
     } finally {
       refreshBtn.classList.remove('spinning');
     }
   }
+
+  function orderCardHtml(o) {
+    const d = o['주문일시'] ? new Date(o['주문일시']) : null;
+    const dateStr = d ? (d.getMonth()+1) + '.' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') : '';
+    return `<div class="order-card" data-order-id="${o['주문ID']}">
+      <div class="order-top">
+        <span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널'] || '기타'}</span>
+        <span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
+        ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">송장미전송</span>' : ''}
+        <span class="order-date">${dateStr}</span>
+      </div>
+      <div class="order-product">${o['상품명'] || '-'}</div>
+      <div class="order-meta">
+        <span>수량 <b>${formatWon(o['수량'])}개</b></span>
+        <span>구매자 <b>${o['구매자명'] || '-'}</b></span>
+      </div>
+      <div class="order-bottom">
+        <span class="order-amount mono">${formatWon(o['판매가'])}원</span>
+        ${o['주문상태'] === '신규'
+          ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">바로 송장출력</button>`
+          : ``}
+      </div>
+    </div>`;
+  }
+
+  function renderOrderList() {
+    const listEl = document.getElementById('orderList');
+
+    if (!currentOrders.length) {
+      listEl.innerHTML = `<div class="empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
+        <b>주문이 없어요</b>${currentStatus ? '이 상태의 주문이 아직 없어요' : '채널 연동이 완료되면 여기 자동으로 쌓여요'}
+      </div>`;
+      return;
+    }
+
+    if (!groupBySite) {
+      listEl.innerHTML = currentOrders.map(orderCardHtml).join('');
+      return;
+    }
+
+    // 사이트별로 그룹핑해서 섹션별로 보여주기
+    const groups = {};
+    currentOrders.forEach(o => {
+      const ch = o['판매채널'] || '기타';
+      if (!groups[ch]) groups[ch] = [];
+      groups[ch].push(o);
+    });
+
+    listEl.innerHTML = Object.keys(groups).sort().map(ch => {
+      return `<div class="site-group-header">
+          <span class="${channelBadgeClass(ch)}">${ch}</span> ${groups[ch].length}건
+        </div>` + groups[ch].map(orderCardHtml).join('');
+    }).join('');
+  }
+
+  document.getElementById('viewToggleBtn').addEventListener('click', () => {
+    groupBySite = !groupBySite;
+    const btn = document.getElementById('viewToggleBtn');
+    btn.classList.toggle('active', groupBySite);
+    btn.lastChild.textContent = groupBySite ? ' 시간순으로 보기' : ' 사이트별로 정리';
+    renderOrderList();
+  });
 
   // 필터 탭
   document.getElementById('filterTabs').addEventListener('click', (e) => {
@@ -425,6 +509,7 @@
       <div class="detail-row"><span>수량 / 금액</span><span>${formatWon(o['수량'])}개 · ${formatWon(o['판매가'])}원</span></div>
       <div class="detail-row"><span>현재 상태</span><span>${o['주문상태']||'신규'}</span></div>
       ${o['채널전송상태'] ? `<div class="detail-row"><span>채널 전송</span><span style="color:${o['채널전송상태']==='실패' ? 'var(--danger)' : 'inherit'}">${o['채널전송상태']}</span></div>` : ''}
+      <div id="deliveryStatusRow"></div>
     `;
 
     const actions = document.getElementById('detailActions');
@@ -440,6 +525,7 @@
     }
     if (o['주문상태'] !== '신규' && o['주문상태'] !== '취소') {
       actionHtml += `<button class="btn btn-ghost" id="btnPrintLabel">송장 출력물 보기</button>`;
+      actionHtml += `<button class="btn btn-ghost" id="btnCheckDelivery">배송현황 조회</button>`;
     }
     if (o['주문상태'] === '신규') {
       actionHtml += `<button class="btn btn-danger" id="btnGoCancel">취소 처리</button>`;
@@ -460,6 +546,23 @@
     const printBtn = document.getElementById('btnPrintLabel');
     if (printBtn) printBtn.addEventListener('click', () => {
       window.open('print.html?orderId=' + encodeURIComponent(o['주문ID']), '_blank');
+    });
+
+    const deliveryBtn = document.getElementById('btnCheckDelivery');
+    if (deliveryBtn) deliveryBtn.addEventListener('click', async () => {
+      deliveryBtn.disabled = true;
+      deliveryBtn.textContent = '조회 중...';
+      const rowEl = document.getElementById('deliveryStatusRow');
+      try {
+        const res = await callApi('getDeliveryStatus', { orderId: o['주문ID'] });
+        if (res.error) throw new Error(res.error);
+        rowEl.innerHTML = `<div class="detail-row"><span>배송현황</span><span>${res.available ? res.status : res.message}</span></div>`;
+      } catch (e) {
+        rowEl.innerHTML = `<div class="detail-row"><span>배송현황</span><span>조회 실패: ${e.message}</span></div>`;
+      } finally {
+        deliveryBtn.disabled = false;
+        deliveryBtn.textContent = '배송현황 조회';
+      }
     });
 
     const sendBtn = document.getElementById('btnGoSend');
@@ -652,6 +755,66 @@
   });
 
   loadOrders(currentStatus);
+
+  // 주문 수집 카드
+  document.getElementById('collectHeader').addEventListener('click', () => {
+    const body = document.getElementById('collectBody');
+    const icon = document.getElementById('collectToggleIcon');
+    body.classList.toggle('open');
+    icon.classList.toggle('open');
+    if (body.classList.contains('open') && !document.getElementById('collectChannelList').dataset.loaded) {
+      loadChannelListForCollect();
+    }
+  });
+
+  async function loadChannelListForCollect() {
+    const listEl = document.getElementById('collectChannelList');
+    try {
+      const channels = await callApi('listChannels', {});
+      if (channels.error) throw new Error(channels.error);
+      listEl.dataset.loaded = '1';
+      listEl.innerHTML = channels.map(ch => {
+        const isOn = ch['활성여부'] === 'Y';
+        return `<div class="collect-channel-row">
+          <input type="checkbox" value="${ch['채널명']}" ${isOn ? 'checked' : ''} data-collect-channel>
+          <span class="collect-channel-name">${ch['채널명']}</span>
+          <span class="collect-channel-badge ${isOn ? 'on' : 'off'}">${isOn ? 'API 연동됨' : '연동 대기'}</span>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      listEl.innerHTML = '<div style="font-size:12px; color:var(--ink-mute);">채널 목록을 불러오지 못했어요</div>';
+    }
+  }
+
+  document.getElementById('collectRunBtn').addEventListener('click', async () => {
+    const checked = Array.from(document.querySelectorAll('[data-collect-channel]:checked')).map(el => el.value);
+    if (!checked.length) { showToast('수집할 사이트를 하나 이상 선택해주세요'); return; }
+
+    const btn = document.getElementById('collectRunBtn');
+    const resultEl = document.getElementById('collectResult');
+    btn.disabled = true;
+    btn.textContent = '수집 중...';
+    resultEl.innerHTML = '';
+
+    try {
+      const results = await callApi('collectSelectedOrders', { channels: checked.join(',') });
+      if (results.error) throw new Error(results.error);
+
+      resultEl.innerHTML = results.map(r => {
+        if (r.success) return `<div>✅ ${r.channel}: ${r.count}건 수집</div>`;
+        return `<div>⚠️ ${r.channel}: ${r.message}</div>`;
+      }).join('');
+
+      const totalCollected = results.reduce((sum, r) => sum + (r.count || 0), 0);
+      showToast(totalCollected > 0 ? `총 ${totalCollected}건 수집됐어요` : '새로 수집된 주문이 없어요');
+      loadOrders(currentStatus);
+    } catch (e) {
+      resultEl.innerHTML = '<div>수집 실패: ' + e.message + '</div>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '선택한 사이트에서 수집하기';
+    }
+  });
 
   let allProductsForOrder = [];
   async function loadProductsForOrderForm() {
