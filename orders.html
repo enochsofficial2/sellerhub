@@ -454,7 +454,7 @@
       <td><span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">미전송</span>' : ''}</td>
       <td>${o['상품명'] || '-'}</td>
-      <td>${o['구매자명'] || '-'}</td>
+      <td class="${o['구매자명'] ? 'copyable' : ''}" ${o['구매자명'] ? `data-copy="${o['구매자명']}"` : ''}>${o['구매자명'] || '-'}</td>
       <td class="mono ${o['구매자연락처'] ? 'copyable' : ''}" ${o['구매자연락처'] ? `data-copy="${o['구매자연락처']}"` : ''}>${o['구매자연락처'] || '-'}</td>
       <td class="${o['구매자주소'] ? 'copyable' : ''}" ${o['구매자주소'] ? `data-copy="${o['구매자주소']}"` : ''} style="max-width:220px;">${o['구매자주소'] || '-'}</td>
       <td>${formatWon(o['수량'])}개</td>
