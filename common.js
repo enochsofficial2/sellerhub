@@ -86,7 +86,7 @@ if ('serviceWorker' in navigator) {
       : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
+  function injectToggleButton() {
     const btn = document.createElement('button');
     btn.className = 'theme-toggle-btn';
     btn.setAttribute('aria-label', '다크모드 전환');
@@ -102,5 +102,13 @@ if ('serviceWorker' in navigator) {
     });
 
     document.body.appendChild(btn);
-  });
+  }
+
+  // common.js는 보통 body 맨 아래에서 불러와지기 때문에, 이 시점엔 이미
+  // DOMContentLoaded가 지나가버린 경우가 많음 -> 그 경우 바로 실행, 아니면 이벤트로 대기
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', injectToggleButton);
+  } else {
+    injectToggleButton();
+  }
 })();
