@@ -161,14 +161,18 @@
       el.innerHTML = `<div class="empty" style="padding:20px;"><b>아직 데이터가 없어요</b>주문이 쌓이면 인기상품이 표시돼요</div>`;
       return;
     }
-    el.innerHTML = products.map((p, i) => `<div class="rank-row">
+    el.innerHTML = products.map((p, i) => {
+      const channelLine = (p.byChannel || []).map(c => `${c.channel} ${formatWon(c.count)}개`).join(' · ');
+      return `<div class="rank-row">
       <div class="rank-badge">${i + 1}</div>
       <div class="rank-info">
         <div class="rank-name">${p.name}</div>
         <div class="rank-sub mono">${formatWon(p.count)}개 판매</div>
+        ${channelLine ? `<div style="font-size:11px; color:var(--ink-mute); margin-top:3px;">${channelLine}</div>` : ''}
       </div>
       <div class="rank-amount mono">${formatWon(p.amount)}원</div>
-    </div>`).join('');
+    </div>`;
+    }).join('');
   }
 
   function renderChannels(channels) {
