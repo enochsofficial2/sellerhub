@@ -516,28 +516,28 @@
           let started = false;
 
           for (const r of grid) {
+            const col0 = String(r[0] || '').trim();
             const col1 = String(r[1] || '').trim();
-            const col2 = String(r[2] || '').trim();
 
             if (!started) {
-              if (col1 === '구분' && col2 === '월') started = true;
+              if (col0 === '구분' && col1 === '월') started = true;
               continue;
             }
-            if (col2 === '총 합계액') break;
-            if (col1) currentChannel = col1;
-            if (!/^\d{2}월$/.test(col2)) continue;
+            if (col1 === '총 합계액') break;
+            if (col0) currentChannel = col0;
+            if (!/^\d{2}월$/.test(col1)) continue;
 
             rows.push({
               채널: currentChannel,
-              월: col2,
-              신용카드: Number(r[3]) || 0,
-              현금영수증: Number(r[4]) || 0,
-              기타: Number(r[5]) || 0,
-              프로모션지원금: Number(r[6]) || 0,
-              매출합계: Number(r[8]) || 0,
-              수수료: Number(r[10]) || 0,
-              기타비용: Number(r[11]) || 0,
-              비용합계: Number(r[12]) || 0
+              월: col1,
+              신용카드: Number(r[2]) || 0,
+              현금영수증: Number(r[3]) || 0,
+              기타: Number(r[4]) || 0,
+              프로모션지원금: Number(r[5]) || 0,
+              매출합계: Number(r[7]) || 0,
+              수수료: Number(r[9]) || 0,
+              기타비용: Number(r[10]) || 0,
+              비용합계: Number(r[11]) || 0
             });
           }
           resolve(rows);
