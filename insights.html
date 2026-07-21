@@ -199,6 +199,10 @@
       <div class="settle-upload-scroll">
         <table class="settle-upload-table" id="settleUploadTable"></table>
       </div>
+      <button class="settle-download-btn" id="settleUploadDownload">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        엑셀 다운로드
+      </button>
     </div>
   </main>
 
@@ -476,6 +480,20 @@
     btn.classList.add('active');
     uploadBrand = btn.dataset.brand;
     loadSettlementUpload();
+  });
+
+  document.getElementById('settleUploadDownload').addEventListener('click', async () => {
+    const dlBtn = document.getElementById('settleUploadDownload');
+    dlBtn.disabled = true;
+    try {
+      const data = await callApi('exportSettlementUpload', { brand: uploadBrand });
+      if (data.error) throw new Error(data.error);
+      window.open(data.url, '_blank');
+    } catch (e) {
+      showToast('엑셀 다운로드 실패: ' + e.message);
+    } finally {
+      dlBtn.disabled = false;
+    }
   });
 
   document.getElementById('settleUploadBtn').addEventListener('click', async () => {
