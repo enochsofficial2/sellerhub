@@ -28,6 +28,20 @@ function callApi(action, params) {
   });
 }
 
+/**
+ * ✅ 2026-07-21 정산표 업로드용 POST 헬퍼 추가
+ * Apps Script 웹앱은 doGet만 JSONP로 쓰고 있었는데, 정산표 업로드는 데이터가 커서
+ * URL 파라미터로 보내기 어려워 POST로 보냄. CORS 프리플라이트(OPTIONS)를 피하려고
+ * Content-Type을 application/json이 아니라 text/plain으로 보냄 (Apps Script가 내용은 그대로 JSON.parse함).
+ */
+function postApi(action, payload) {
+  return fetch(WEBAPP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+  }).then(function (res) { return res.json(); });
+}
+
 function formatWon(n) {
   return Number(n || 0).toLocaleString('ko-KR');
 }
