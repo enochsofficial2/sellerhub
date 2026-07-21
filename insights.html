@@ -11,6 +11,7 @@
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   .period-note{position:relative; font-size:12px; color:rgba(255,255,255,0.6); margin-top:4px;}
 
@@ -87,6 +88,25 @@
     .reco-card{grid-column: 1 / -1;}
     #settleCard{grid-column: 1 / -1;}
   }
+
+  .upload-brand-tabs{display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;}
+  .upload-brand-tab{padding:7px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink-mute); font-size:12px; font-weight:700; cursor:pointer;}
+  .upload-brand-tab.active{background:var(--amber); color:#fff; border-color:var(--amber);}
+  .upload-file-row{display:flex; gap:8px; margin-bottom:12px; align-items:center;}
+  .upload-file-input{flex:1; font-size:12px; min-width:0;}
+  .upload-btn{padding:8px 14px; border-radius:8px; background:var(--navy); color:#fff; font-size:12px; font-weight:700; border:none; cursor:pointer; white-space:nowrap;}
+  .upload-meta{font-size:11px; color:var(--ink-mute); margin-bottom:10px;}
+  .settle-upload-scroll{overflow-x:auto;}
+  .settle-upload-table{width:100%; border-collapse:collapse; font-size:11.5px;}
+  .settle-upload-table th, .settle-upload-table td{padding:6px 5px; text-align:right; border-bottom:1px solid var(--bg); white-space:nowrap;}
+  .settle-upload-table th:first-child, .settle-upload-table td:first-child{text-align:left;}
+  .settle-upload-table thead th{color:var(--ink-mute); font-weight:700; font-size:10.5px;}
+  .settle-upload-table tr.channel-total-row{font-weight:800; background:var(--bg);}
+  .settle-upload-table tr.grand-total-row{font-weight:800; background:var(--amber); color:#fff;}
+
+  @media (min-width: 900px) {
+    #settleUploadCard{grid-column: 1 / -1;}
+  }
 </style>
 </head>
 <body>
@@ -135,6 +155,26 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
         엑셀 다운로드
       </button>
+    </div>
+
+    <div class="insight-card" id="settleUploadCard">
+      <div class="insight-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M4 21h16"/></svg>
+        채널 정산표 (업로드)
+      </div>
+      <div class="upload-brand-tabs" id="uploadBrandTabs">
+        <button class="upload-brand-tab active" data-brand="랩 아이엠그라운드">랩 아이엠그라운드</button>
+        <button class="upload-brand-tab" data-brand="아임홈">아임홈</button>
+        <button class="upload-brand-tab" data-brand="아그네스">아그네스</button>
+      </div>
+      <div class="upload-file-row">
+        <input type="file" id="settleUploadFile" class="upload-file-input" accept=".xls,.xlsx">
+        <button class="upload-btn" id="settleUploadBtn">업로드</button>
+      </div>
+      <div class="upload-meta" id="uploadMeta">불러오는 중...</div>
+      <div class="settle-upload-scroll">
+        <table class="settle-upload-table" id="settleUploadTable"></table>
+      </div>
     </div>
 
     <div class="insight-card" id="topProductsCard">
@@ -421,8 +461,164 @@
     }
   });
 
+  // ============================================================
+  // ✅ 2026-07-21 채널 정산표(xls) 업로드 기능
+  // 아그네스/아임홈/랩아이엠그라운드 등 브랜드별로 매 분기 손으로 취합하던
+  // 실제 정산 리포트(Overall 시트)를 그대로 업로드해서 보관/조회할 수 있게 함.
+  // 위 정산 카드(월정산 등)는 주문 데이터 기반 추정치이고, 이건 채널에서 받은 실제 수치임.
+  // ============================================================
+  let uploadBrand = '랩 아이엠그라운드';
+
+  document.getElementById('uploadBrandTabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.upload-brand-tab');
+    if (!btn) return;
+    document.querySelectorAll('.upload-brand-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    uploadBrand = btn.dataset.brand;
+    loadSettlementUpload();
+  });
+
+  document.getElementById('settleUploadBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('settleUploadFile');
+    const file = fileInput.files[0];
+    if (!file) { showToast('파일을 선택해주세요'); return; }
+    const btn = document.getElementById('settleUploadBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+    try {
+      const rows = await parseSettlementFile(file);
+      if (!rows.length) throw new Error('Overall 시트에서 월별 데이터를 찾지 못했어요');
+      const res = await postApi('saveSettlementUpload', { brand: uploadBrand, rows: rows, sourceLabel: file.name });
+      if (res.error) throw new Error(res.error);
+      showToast(res.savedRows + '건 저장됐어요');
+      fileInput.value = '';
+      loadSettlementUpload();
+    } catch (e) {
+      showToast('업로드 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '업로드';
+    }
+  });
+
+  function parseSettlementFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          const sheetName = wb.SheetNames.includes('Overall') ? 'Overall' : wb.SheetNames[0];
+          const sheet = wb.Sheets[sheetName];
+          const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+          const rows = [];
+          let currentChannel = '';
+          let started = false;
+
+          for (const r of grid) {
+            const col1 = String(r[1] || '').trim();
+            const col2 = String(r[2] || '').trim();
+
+            if (!started) {
+              if (col1 === '구분' && col2 === '월') started = true;
+              continue;
+            }
+            if (col2 === '총 합계액') break;
+            if (col1) currentChannel = col1;
+            if (!/^\d{2}월$/.test(col2)) continue;
+
+            rows.push({
+              채널: currentChannel,
+              월: col2,
+              신용카드: Number(r[3]) || 0,
+              현금영수증: Number(r[4]) || 0,
+              기타: Number(r[5]) || 0,
+              프로모션지원금: Number(r[6]) || 0,
+              매출합계: Number(r[8]) || 0,
+              수수료: Number(r[10]) || 0,
+              기타비용: Number(r[11]) || 0,
+              비용합계: Number(r[12]) || 0
+            });
+          }
+          resolve(rows);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error('파일을 읽지 못했어요'));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  async function loadSettlementUpload() {
+    try {
+      const data = await callApi('getSettlementUpload', { brand: uploadBrand });
+      if (data.error) throw new Error(data.error);
+      renderSettlementUpload(data);
+    } catch (e) {
+      showToast('정산표 불러오기 실패: ' + e.message);
+    }
+  }
+
+  function renderSettlementUpload(data) {
+    const metaEl = document.getElementById('uploadMeta');
+    const tableEl = document.getElementById('settleUploadTable');
+
+    if (!data.rows || !data.rows.length) {
+      metaEl.textContent = '아직 업로드된 정산표가 없어요. 엑셀 파일을 올려주세요.';
+      tableEl.innerHTML = '';
+      return;
+    }
+
+    const uploadedDate = data.uploadedAt ? new Date(data.uploadedAt).toLocaleString('ko-KR') : '-';
+    metaEl.textContent = (data.sourceLabel || '') + ' · ' + uploadedDate + ' 업로드';
+
+    const channelOrder = [];
+    const byChannel = {};
+    data.rows.forEach(r => {
+      if (!byChannel[r.채널]) { byChannel[r.채널] = []; channelOrder.push(r.채널); }
+      byChannel[r.채널].push(r);
+    });
+
+    const sumFields = ['신용카드', '현금영수증', '기타', '프로모션지원금', '매출합계', '수수료', '기타비용', '비용합계'];
+    const grand = {}; sumFields.forEach(f => grand[f] = 0);
+
+    let bodyHtml = '';
+    channelOrder.forEach(ch => {
+      const chRows = byChannel[ch].slice().sort((a, b) => a.월.localeCompare(b.월));
+      const chTotal = {}; sumFields.forEach(f => chTotal[f] = 0);
+
+      chRows.forEach(r => {
+        sumFields.forEach(f => chTotal[f] += Number(r[f] || 0));
+        bodyHtml += '<tr>' +
+          '<td>' + ch + '</td><td>' + r.월 + '</td>' +
+          '<td>' + formatWon(r.신용카드) + '</td><td>' + formatWon(r.현금영수증) + '</td><td>' + formatWon(r.기타) + '</td>' +
+          '<td>' + formatWon(r.매출합계) + '</td><td>' + formatWon(r.수수료) + '</td><td>' + formatWon(r.기타비용) + '</td><td>' + formatWon(r.비용합계) + '</td>' +
+        '</tr>';
+      });
+
+      sumFields.forEach(f => grand[f] += chTotal[f]);
+      bodyHtml += '<tr class="channel-total-row">' +
+        '<td>' + ch + '</td><td>합계</td>' +
+        '<td>' + formatWon(chTotal.신용카드) + '</td><td>' + formatWon(chTotal.현금영수증) + '</td><td>' + formatWon(chTotal.기타) + '</td>' +
+        '<td>' + formatWon(chTotal.매출합계) + '</td><td>' + formatWon(chTotal.수수료) + '</td><td>' + formatWon(chTotal.기타비용) + '</td><td>' + formatWon(chTotal.비용합계) + '</td>' +
+      '</tr>';
+    });
+
+    bodyHtml += '<tr class="grand-total-row">' +
+      '<td colspan="2">총 합계</td>' +
+      '<td>' + formatWon(grand.신용카드) + '</td><td>' + formatWon(grand.현금영수증) + '</td><td>' + formatWon(grand.기타) + '</td>' +
+      '<td>' + formatWon(grand.매출합계) + '</td><td>' + formatWon(grand.수수료) + '</td><td>' + formatWon(grand.기타비용) + '</td><td>' + formatWon(grand.비용합계) + '</td>' +
+    '</tr>';
+
+    tableEl.innerHTML = '<thead><tr>' +
+      '<th>채널</th><th>월</th><th>신용카드</th><th>현금영수증</th><th>기타</th><th>매출합계</th><th>수수료</th><th>기타비용</th><th>비용합계</th>' +
+      '</tr></thead><tbody>' + bodyHtml + '</tbody>';
+  }
+
   loadAnalytics();
   loadSettlement();
+  loadSettlementUpload();
 </script>
 </body>
 </html>
