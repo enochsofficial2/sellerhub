@@ -18,6 +18,10 @@
   .search-box input::placeholder{color:rgba(255,255,255,0.5);}
   .search-box svg{color:rgba(255,255,255,0.5); flex-shrink:0;}
 
+  .brand-tabs{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;}
+  .brand-tabs button{padding:7px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink-mute); font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;}
+  .brand-tabs button.active{background:var(--amber); color:#fff; border-color:var(--amber);}
+
   .stock-summary{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
   .stock-summary-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 16px;}
   .stock-summary-label{font-size:11.5px; color:var(--ink-mute); margin-bottom:4px;}
@@ -65,6 +69,12 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input type="text" id="searchInput" placeholder="상품명으로 검색">
       </div>
+    </div>
+    <div class="brand-tabs" id="brandFilterTabs">
+      <button data-brand="" class="active">전체</button>
+      <button data-brand="랩 아이엠그라운드">랩 아이엠그라운드</button>
+      <button data-brand="아임홈">아임홈</button>
+      <button data-brand="아그네스">아그네스</button>
     </div>
   </header>
 
@@ -127,6 +137,14 @@
   <div class="field"><label>SKU / 옵션코드</label><input type="text" id="pSku" placeholder="선택사항"></div>
   <div class="field"><label>카테고리</label>
     <select id="pCategory"><option value="미분류">미분류</option><option value="__new__">+ 새 카테고리 추가</option></select>
+  </div>
+  <div class="field"><label>브랜드</label>
+    <select id="pBrand">
+      <option value="">미지정</option>
+      <option value="랩 아이엠그라운드">랩 아이엠그라운드</option>
+      <option value="아임홈">아임홈</option>
+      <option value="아그네스">아그네스</option>
+    </select>
   </div>
   <div class="field"><label>초기 재고수량</label><input type="number" id="pStock" value="0" min="0"></div>
   <div class="field"><label>안전재고 (이 이하면 부족 표시)</label><input type="number" id="pSafety" value="5" min="0"></div>
@@ -202,7 +220,7 @@
         <div class="product-top">
           <div>
             <div class="product-name">${p['상품명']}</div>
-            <div class="product-meta">${p['SKU'] ? 'SKU ' + p['SKU'] + ' · ' : ''}${p['카테고리ID'] || '미분류'}</div>
+            <div class="product-meta">${p['SKU'] ? 'SKU ' + p['SKU'] + ' · ' : ''}${p['카테고리ID'] || '미분류'}${p['브랜드'] ? ' · ' + p['브랜드'] : ''}</div>
             ${isLow ? '<span class="low-badge">재고 부족</span>' : ''}
             ${p['신선상품여부'] === 'Y' ? '<span class="low-badge" style="color:#1F8A70; background:#DCF3EC;">신선/냉장</span>' : ''}
           </div>
@@ -218,10 +236,25 @@
     }).join('');
   }
 
-  document.getElementById('searchInput').addEventListener('input', (e) => {
-    const q = e.target.value.trim();
-    const filtered = q ? allProducts.filter(p => (p['상품명'] || '').includes(q)) : allProducts;
+  let activeBrand = '';
+
+  function applyFilters() {
+    const q = document.getElementById('searchInput').value.trim();
+    let filtered = allProducts;
+    if (activeBrand) filtered = filtered.filter(p => (p['브랜드'] || '') === activeBrand);
+    if (q) filtered = filtered.filter(p => (p['상품명'] || '').includes(q));
     renderProducts(filtered);
+  }
+
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+  document.getElementById('brandFilterTabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    document.querySelectorAll('#brandFilterTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeBrand = btn.dataset.brand;
+    applyFilters();
   });
 
   document.getElementById('productList').addEventListener('click', async (e) => {
@@ -303,7 +336,8 @@
         initialStock: document.getElementById('pStock').value,
         safetyStock: document.getElementById('pSafety').value,
         price: document.getElementById('pPrice').value,
-        isFresh: document.getElementById('pFresh').checked ? 'Y' : 'N'
+        isFresh: document.getElementById('pFresh').checked ? 'Y' : 'N',
+        brand: document.getElementById('pBrand').value
       });
       if (res.error) throw new Error(res.error);
       showToast('상품이 등록됐어요');
@@ -312,6 +346,7 @@
       document.getElementById('pSku').value = '';
       document.getElementById('pStock').value = 0;
       document.getElementById('pFresh').checked = false;
+      document.getElementById('pBrand').value = '';
       loadProducts();
     } catch (e) {
       showToast('등록 실패: ' + e.message);
