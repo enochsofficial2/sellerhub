@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>정산 - 셀러허브</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F1B2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+
+  .period-note{position:relative; font-size:12px; color:rgba(255,255,255,0.6); margin-top:4px;}
+
+  .insight-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:14px;}
+  .insight-title{font-size:13.5px; font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:7px;}
+  .insight-title svg{color:var(--amber); flex-shrink:0;}
+
+  .rank-row{display:flex; align-items:center; gap:11px; padding:9px 0;}
+  .rank-row:not(:last-child){border-bottom:1px solid var(--bg);}
+  .rank-badge{width:24px; height:24px; border-radius:7px; background:var(--bg); color:var(--ink-mute);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0;}
+  .rank-row:nth-child(1) .rank-badge{background:var(--amber); color:#fff;}
+  .rank-info{flex:1; min-width:0;}
+  .rank-name{font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rank-sub{font-size:11px; color:var(--ink-mute); margin-top:1px;}
+  .rank-amount{font-size:13.5px; font-weight:800; flex-shrink:0;}
+
+  .channel-row{margin-bottom:12px;}
+  .channel-row:last-child{margin-bottom:0;}
+  .channel-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+  .channel-name{font-size:13px; font-weight:700; display:flex; align-items:center; gap:6px;}
+  .channel-dot{width:8px; height:8px; border-radius:50%;}
+  .channel-pct{font-size:12px; color:var(--ink-mute); font-weight:700;}
+  .channel-bar-track{height:8px; border-radius:999px; background:var(--bg); overflow:hidden;}
+  .channel-bar-fill{height:100%; border-radius:999px;}
+
+  .hour-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .hour-block{background:var(--bg); border-radius:12px; padding:12px 8px; text-align:center;}
+  .hour-block.peak{background:linear-gradient(135deg, var(--amber), #F0BC6A); color:#fff;}
+  .hour-block-label{font-size:10.5px; color:inherit; opacity:0.8; margin-bottom:6px; font-weight:600;}
+  .hour-block-value{font-size:17px; font-weight:800;}
+  .hour-block-channels{margin-top:7px; padding-top:7px; border-top:1px solid rgba(0,0,0,0.08); font-size:9.5px; opacity:0.85; line-height:1.5;}
+  .hour-block.peak .hour-block-channels{border-top-color:rgba(255,255,255,0.3);}
+
+  .reco-card{background:linear-gradient(145deg, #12203D, #1B2C47); color:#fff; border-radius:16px; padding:20px; margin-bottom:14px; position:relative; overflow:hidden;}
+  .reco-card::after{content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px;
+    background: radial-gradient(circle, rgba(232,163,61,0.25), transparent 70%);}
+  .reco-title{font-size:13.5px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:7px; position:relative;}
+  .reco-title svg{color:var(--amber); flex-shrink:0;}
+  .reco-sub{font-size:11.5px; color:rgba(255,255,255,0.55); margin-bottom:14px; position:relative;}
+  .reco-item{display:flex; gap:10px; padding:10px 0; border-top:1px solid rgba(255,255,255,0.1); position:relative;}
+  .reco-item:first-of-type{border-top:0;}
+  .reco-icon{width:26px; height:26px; border-radius:8px; background:rgba(232,163,61,0.18); color:var(--amber);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; font-weight:800;}
+  .reco-text{font-size:12.5px; line-height:1.6; color:rgba(255,255,255,0.9);}
+  .reco-text b{color:#fff; font-weight:800;}
+
+  .settle-tabs{display:flex; gap:6px; margin-bottom:12px;}
+  .settle-tab{flex:1; padding:8px 0; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink-mute); font-size:12.5px; font-weight:700; cursor:pointer;}
+  .settle-tab.active{background:var(--amber); color:#fff; border-color:var(--amber);}
+
+  .settle-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .settle-nav-btn{background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; color:var(--ink); cursor:pointer;}
+  .settle-label{font-size:13px; font-weight:800;}
+
+  .settle-total{background:var(--bg); border-radius:12px; padding:16px; text-align:center; margin-bottom:14px;}
+  .settle-total-amount{font-size:22px; font-weight:800; color:var(--amber);}
+  .settle-total-count{font-size:12px; color:var(--ink-mute); margin-top:4px;}
+
+  .settle-subtitle{font-size:12px; font-weight:800; color:var(--ink-mute); margin:14px 0 8px;}
+
+  .settle-product-group{margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--bg);}
+  .settle-product-group:last-child{border-bottom:0; margin-bottom:0; padding-bottom:0;}
+  .settle-product-name{font-size:13px; font-weight:700; margin-bottom:4px;}
+  .settle-product-total{font-size:12px; color:var(--ink-mute); font-weight:700; margin-bottom:6px;}
+  .settle-product-channel{display:flex; justify-content:space-between; font-size:11.5px; color:var(--ink-mute); padding:2px 0;}
+
+  .settle-download-btn{width:100%; margin-top:14px; padding:12px; border-radius:10px; border:none; background:var(--navy); color:#fff; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;}
+  .settle-empty{padding:14px 0; font-size:12.5px; color:var(--ink-mute); text-align:center;}
+
+  @media (min-width: 900px) {
+    main{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start;}
+    .insight-card{margin-bottom:0;}
+    .reco-card{grid-column: 1 / -1;}
+    #settleCard{grid-column: 1 / -1;}
+  }
+
+  .upload-brand-tabs{display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;}
+  .upload-brand-tab{padding:7px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink-mute); font-size:12px; font-weight:700; cursor:pointer;}
+  .upload-brand-tab.active{background:var(--amber); color:#fff; border-color:var(--amber);}
+  .upload-file-row{display:flex; gap:8px; margin-bottom:12px; align-items:center;}
+  .upload-file-input{flex:1; font-size:12px; min-width:0;}
+  .upload-btn{padding:8px 14px; border-radius:8px; background:var(--navy); color:#fff; font-size:12px; font-weight:700; border:none; cursor:pointer; white-space:nowrap;}
+  .upload-meta{font-size:11px; color:var(--ink-mute); margin-bottom:10px;}
+  .settle-upload-scroll{overflow-x:auto;}
+  .settle-upload-table{width:100%; border-collapse:collapse; font-size:11.5px;}
+  .settle-upload-table th, .settle-upload-table td{padding:6px 5px; text-align:right; border-bottom:1px solid var(--bg); white-space:nowrap;}
+  .settle-upload-table th:first-child, .settle-upload-table td:first-child{text-align:left;}
+  .settle-upload-table thead th{color:var(--ink-mute); font-weight:700; font-size:10.5px;}
+  .settle-upload-table tr.channel-total-row{font-weight:800; background:var(--bg);}
+  .settle-upload-table tr.grand-total-row{font-weight:800; background:var(--amber); color:#fff;}
+
+  @media (min-width: 900px) {
+    #settleUploadCard{grid-column: 1 / -1;}
+  }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand"><span class="dot"></span>SELLER HUB</div>
+    <h1 class="page-title">정산</h1>
+    <div class="period-note">채널별 매출/정산 내역을 한눈에 확인하고 정산표를 업로드하세요</div>
+  </header>
+
+  <main>
+    <div class="insight-card" id="settleCard">
+      <div class="insight-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg>
+        정산
+      </div>
+      <div class="settle-tabs">
+        <button class="settle-tab active" data-period="month">월정산</button>
+        <button class="settle-tab" data-period="quarter">3개월정산</button>
+        <button class="settle-tab" data-period="half">6개월정산</button>
+      </div>
+      <div class="settle-nav">
+        <button class="settle-nav-btn" id="settlePrev">‹ 이전</button>
+        <div class="settle-label" id="settleLabel">-</div>
+        <button class="settle-nav-btn" id="settleNext">다음 ›</button>
+      </div>
+      <div class="settle-total" id="settleTotal">
+        <div class="settle-total-amount mono">-</div>
+        <div class="settle-total-count">-</div>
+      </div>
+      <div class="settle-subtitle">사이트별 매출</div>
+      <div id="settleChannel"></div>
+      <div class="settle-subtitle">상품별 매출</div>
+      <div id="settleProduct"></div>
+      <button class="settle-download-btn" id="settleDownload">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        엑셀 다운로드
+      </button>
+    </div>
+
+    <div class="insight-card" id="settleUploadCard">
+      <div class="insight-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M4 21h16"/></svg>
+        채널 정산표 (업로드)
+      </div>
+      <div class="upload-brand-tabs" id="uploadBrandTabs">
+        <button class="upload-brand-tab active" data-brand="랩 아이엠그라운드">랩 아이엠그라운드</button>
+        <button class="upload-brand-tab" data-brand="아임홈">아임홈</button>
+        <button class="upload-brand-tab" data-brand="아그네스">아그네스</button>
+      </div>
+      <div class="upload-file-row">
+        <input type="file" id="settleUploadFile" class="upload-file-input" accept=".xls,.xlsx">
+        <button class="upload-btn" id="settleUploadBtn">업로드</button>
+      </div>
+      <div class="upload-meta" id="uploadMeta">불러오는 중...</div>
+      <div class="settle-upload-scroll">
+        <table class="settle-upload-table" id="settleUploadTable"></table>
+      </div>
+      <button class="settle-download-btn" id="settleUploadDownload">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        엑셀 다운로드
+      </button>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <nav class="bottom">
+    <div class="bottom-inner">
+      <a href="index.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        대시보드
+      </a>
+      <a href="orders.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
+        주문
+      </a>
+      <a href="inventory.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        재고
+      </a>
+      <a href="insights.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+        종합
+      </a>
+      <a href="settlement.html" class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg>
+        정산
+      </a>
+      <a href="profile.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
+        내정보
+      </a>
+    </div>
+  </nav>
+
+</div>
+
+<script src="common.js"></script>
+<script>
+  /**
+   * ===================================================
+   * 정산 (월별 / 3개월 / 6개월)
+   * ===================================================
+   */
+  let settlePeriodType = 'month';
+  let settleOffset = 0;
+
+  async function loadSettlement() {
+    try {
+      const data = await callApi('getSettlement', { periodType: settlePeriodType, offset: settleOffset });
+      if (data.error) throw new Error(data.error);
+      renderSettlement(data);
+    } catch (e) {
+      showToast('정산 데이터 불러오기 실패: ' + e.message);
+    }
+  }
+
+  function renderSettlement(data) {
+    document.getElementById('settleLabel').textContent = data.label;
+
+    const totalEl = document.getElementById('settleTotal');
+    totalEl.querySelector('.settle-total-amount').textContent = formatWon(data.total.amount) + '원';
+    totalEl.querySelector('.settle-total-count').textContent = formatWon(data.total.count) + '개 판매';
+
+    const channelEl = document.getElementById('settleChannel');
+    if (!data.byChannel.length) {
+      channelEl.innerHTML = `<div class="settle-empty">해당 기간에 매출이 없어요</div>`;
+    } else {
+      channelEl.innerHTML = data.byChannel.map(c => {
+        const color = CHANNEL_COLORS[c.channel] || 'var(--ink-mute)';
+        return `<div class="channel-row">
+          <div class="channel-top">
+            <div class="channel-name"><span class="channel-dot" style="background:${color}"></span>${c.channel}</div>
+            <div class="channel-pct mono">${formatWon(c.amount)}원 · ${formatWon(c.count)}개</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    const productEl = document.getElementById('settleProduct');
+    if (!data.byProduct.length) {
+      productEl.innerHTML = `<div class="settle-empty">해당 기간에 판매된 상품이 없어요</div>`;
+    } else {
+      productEl.innerHTML = data.byProduct.map(p => {
+        const channelLines = p.byChannel.map(c => `<div class="settle-product-channel"><span>${c.channel}</span><span class="mono">${formatWon(c.amount)}원 · ${formatWon(c.count)}개</span></div>`).join('');
+        return `<div class="settle-product-group">
+          <div class="settle-product-name">${p.product}</div>
+          <div class="settle-product-total mono">${formatWon(p.amount)}원 · ${formatWon(p.count)}개</div>
+          ${channelLines}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  document.querySelectorAll('.settle-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.settle-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      settlePeriodType = btn.dataset.period;
+      settleOffset = 0;
+      loadSettlement();
+    });
+  });
+
+  document.getElementById('settlePrev').addEventListener('click', () => {
+    settleOffset -= 1;
+    loadSettlement();
+  });
+
+  document.getElementById('settleNext').addEventListener('click', () => {
+    if (settleOffset >= 0) return;
+    settleOffset += 1;
+    loadSettlement();
+  });
+
+  document.getElementById('settleDownload').addEventListener('click', async (btn) => {
+    const dlBtn = document.getElementById('settleDownload');
+    dlBtn.disabled = true;
+    try {
+      const data = await callApi('exportSettlement', { periodType: settlePeriodType, offset: settleOffset });
+      if (data.error) throw new Error(data.error);
+      window.open(data.url, '_blank');
+    } catch (e) {
+      showToast('엑셀 다운로드 실패: ' + e.message);
+    } finally {
+      dlBtn.disabled = false;
+    }
+  });
+
+  // ============================================================
+  // ✅ 2026-07-21 채널 정산표(xls) 업로드 기능
+  // 아그네스/아임홈/랩아이엠그라운드 등 브랜드별로 매 분기 손으로 취합하던
+  // 실제 정산 리포트(Overall 시트)를 그대로 업로드해서 보관/조회할 수 있게 함.
+  // 위 정산 카드(월정산 등)는 주문 데이터 기반 추정치이고, 이건 채널에서 받은 실제 수치임.
+  // ============================================================
+  let uploadBrand = '랩 아이엠그라운드';
+
+  document.getElementById('uploadBrandTabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.upload-brand-tab');
+    if (!btn) return;
+    document.querySelectorAll('.upload-brand-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    uploadBrand = btn.dataset.brand;
+    loadSettlementUpload();
+  });
+
+  document.getElementById('settleUploadDownload').addEventListener('click', async () => {
+    const dlBtn = document.getElementById('settleUploadDownload');
+    dlBtn.disabled = true;
+    try {
+      const data = await callApi('exportSettlementUpload', { brand: uploadBrand });
+      if (data.error) throw new Error(data.error);
+      window.open(data.url, '_blank');
+    } catch (e) {
+      showToast('엑셀 다운로드 실패: ' + e.message);
+    } finally {
+      dlBtn.disabled = false;
+    }
+  });
+
+  document.getElementById('settleUploadBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('settleUploadFile');
+    const file = fileInput.files[0];
+    if (!file) { showToast('파일을 선택해주세요'); return; }
+    const btn = document.getElementById('settleUploadBtn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+    try {
+      const rows = await parseSettlementFile(file);
+      if (!rows.length) throw new Error('Overall 시트에서 월별 데이터를 찾지 못했어요');
+      const res = await postApi('saveSettlementUpload', { brand: uploadBrand, rows: rows, sourceLabel: file.name });
+      if (res.error) throw new Error(res.error);
+      showToast(res.savedRows + '건 저장됐어요');
+      fileInput.value = '';
+      loadSettlementUpload();
+    } catch (e) {
+      showToast('업로드 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '업로드';
+    }
+  });
+
+  function parseSettlementFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          const sheetName = wb.SheetNames.includes('Overall') ? 'Overall' : wb.SheetNames[0];
+          const sheet = wb.Sheets[sheetName];
+          const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+          const rows = [];
+          let currentChannel = '';
+          let started = false;
+
+          for (const r of grid) {
+            const col0 = String(r[0] || '').trim();
+            const col1 = String(r[1] || '').trim();
+
+            if (!started) {
+              if (col0 === '구분' && col1 === '월') started = true;
+              continue;
+            }
+            if (col1 === '총 합계액') break;
+            if (col0) currentChannel = col0;
+            if (!/^\d{2}월$/.test(col1)) continue;
+
+            rows.push({
+              채널: currentChannel,
+              월: col1,
+              신용카드: Number(r[2]) || 0,
+              현금영수증: Number(r[3]) || 0,
+              기타: Number(r[4]) || 0,
+              프로모션지원금: Number(r[5]) || 0,
+              매출합계: Number(r[7]) || 0,
+              수수료: Number(r[9]) || 0,
+              기타비용: Number(r[10]) || 0,
+              비용합계: Number(r[11]) || 0
+            });
+          }
+          resolve(rows);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error('파일을 읽지 못했어요'));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  async function loadSettlementUpload() {
+    try {
+      const data = await callApi('getSettlementUpload', { brand: uploadBrand });
+      if (data.error) throw new Error(data.error);
+      renderSettlementUpload(data);
+    } catch (e) {
+      showToast('정산표 불러오기 실패: ' + e.message);
+    }
+  }
+
+  function renderSettlementUpload(data) {
+    const metaEl = document.getElementById('uploadMeta');
+    const tableEl = document.getElementById('settleUploadTable');
+
+    if (!data.rows || !data.rows.length) {
+      metaEl.textContent = '아직 업로드된 정산표가 없어요. 엑셀 파일을 올려주세요.';
+      tableEl.innerHTML = '';
+      return;
+    }
+
+    const uploadedDate = data.uploadedAt ? new Date(data.uploadedAt).toLocaleString('ko-KR') : '-';
+    metaEl.textContent = (data.sourceLabel || '') + ' · ' + uploadedDate + ' 업로드';
+
+    const channelOrder = [];
+    const byChannel = {};
+    data.rows.forEach(r => {
+      if (!byChannel[r.채널]) { byChannel[r.채널] = []; channelOrder.push(r.채널); }
+      byChannel[r.채널].push(r);
+    });
+
+    const sumFields = ['신용카드', '현금영수증', '기타', '프로모션지원금', '매출합계', '수수료', '기타비용', '비용합계'];
+    const grand = {}; sumFields.forEach(f => grand[f] = 0);
+
+    let bodyHtml = '';
+    channelOrder.forEach(ch => {
+      const chRows = byChannel[ch].slice().sort((a, b) => a.월.localeCompare(b.월));
+      const chTotal = {}; sumFields.forEach(f => chTotal[f] = 0);
+
+      chRows.forEach(r => {
+        sumFields.forEach(f => chTotal[f] += Number(r[f] || 0));
+        bodyHtml += '<tr>' +
+          '<td>' + ch + '</td><td>' + r.월 + '</td>' +
+          '<td>' + formatWon(r.신용카드) + '</td><td>' + formatWon(r.현금영수증) + '</td><td>' + formatWon(r.기타) + '</td>' +
+          '<td>' + formatWon(r.매출합계) + '</td><td>' + formatWon(r.수수료) + '</td><td>' + formatWon(r.기타비용) + '</td><td>' + formatWon(r.비용합계) + '</td>' +
+        '</tr>';
+      });
+
+      sumFields.forEach(f => grand[f] += chTotal[f]);
+      bodyHtml += '<tr class="channel-total-row">' +
+        '<td>' + ch + '</td><td>합계</td>' +
+        '<td>' + formatWon(chTotal.신용카드) + '</td><td>' + formatWon(chTotal.현금영수증) + '</td><td>' + formatWon(chTotal.기타) + '</td>' +
+        '<td>' + formatWon(chTotal.매출합계) + '</td><td>' + formatWon(chTotal.수수료) + '</td><td>' + formatWon(chTotal.기타비용) + '</td><td>' + formatWon(chTotal.비용합계) + '</td>' +
+      '</tr>';
+    });
+
+    bodyHtml += '<tr class="grand-total-row">' +
+      '<td colspan="2">총 합계</td>' +
+      '<td>' + formatWon(grand.신용카드) + '</td><td>' + formatWon(grand.현금영수증) + '</td><td>' + formatWon(grand.기타) + '</td>' +
+      '<td>' + formatWon(grand.매출합계) + '</td><td>' + formatWon(grand.수수료) + '</td><td>' + formatWon(grand.기타비용) + '</td><td>' + formatWon(grand.비용합계) + '</td>' +
+    '</tr>';
+
+    tableEl.innerHTML = '<thead><tr>' +
+      '<th>채널</th><th>월</th><th>신용카드</th><th>현금영수증</th><th>기타</th><th>매출합계</th><th>수수료</th><th>기타비용</th><th>비용합계</th>' +
+      '</tr></thead><tbody>' + bodyHtml + '</tbody>';
+  }
+
+  loadSettlement();
+  loadSettlementUpload();
+</script>
+</body>
+</html>
