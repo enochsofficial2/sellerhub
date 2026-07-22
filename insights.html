@@ -11,7 +11,6 @@
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   .period-note{position:relative; font-size:12px; color:rgba(255,255,255,0.6); margin-top:4px;}
 
@@ -152,58 +151,9 @@
       <div class="hour-grid" id="hourGrid"></div>
     </div>
 
-    <div class="insight-card" id="settleCard">
-      <div class="insight-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg>
-        정산
-      </div>
-      <div class="settle-tabs">
-        <button class="settle-tab active" data-period="month">월정산</button>
-        <button class="settle-tab" data-period="quarter">3개월정산</button>
-        <button class="settle-tab" data-period="half">6개월정산</button>
-      </div>
-      <div class="settle-nav">
-        <button class="settle-nav-btn" id="settlePrev">‹ 이전</button>
-        <div class="settle-label" id="settleLabel">-</div>
-        <button class="settle-nav-btn" id="settleNext">다음 ›</button>
-      </div>
-      <div class="settle-total" id="settleTotal">
-        <div class="settle-total-amount mono">-</div>
-        <div class="settle-total-count">-</div>
-      </div>
-      <div class="settle-subtitle">사이트별 매출</div>
-      <div id="settleChannel"></div>
-      <div class="settle-subtitle">상품별 매출</div>
-      <div id="settleProduct"></div>
-      <button class="settle-download-btn" id="settleDownload">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
-        엑셀 다운로드
-      </button>
-    </div>
+    
 
-    <div class="insight-card" id="settleUploadCard">
-      <div class="insight-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M4 21h16"/></svg>
-        채널 정산표 (업로드)
-      </div>
-      <div class="upload-brand-tabs" id="uploadBrandTabs">
-        <button class="upload-brand-tab active" data-brand="랩 아이엠그라운드">랩 아이엠그라운드</button>
-        <button class="upload-brand-tab" data-brand="아임홈">아임홈</button>
-        <button class="upload-brand-tab" data-brand="아그네스">아그네스</button>
-      </div>
-      <div class="upload-file-row">
-        <input type="file" id="settleUploadFile" class="upload-file-input" accept=".xls,.xlsx">
-        <button class="upload-btn" id="settleUploadBtn">업로드</button>
-      </div>
-      <div class="upload-meta" id="uploadMeta">불러오는 중...</div>
-      <div class="settle-upload-scroll">
-        <table class="settle-upload-table" id="settleUploadTable"></table>
-      </div>
-      <button class="settle-download-btn" id="settleUploadDownload">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
-        엑셀 다운로드
-      </button>
-    </div>
+    
   </main>
 
   <div class="toast" id="toast"></div>
@@ -226,6 +176,10 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
         종합
       </a>
+      <a href="settlement.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg>
+        정산
+      </a>
       <a href="profile.html" class="nav-item">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
         내정보
@@ -237,6 +191,7 @@
 
 <script src="common.js"></script>
 <script>
+
   const CHANNEL_COLORS = { '쿠팡': 'var(--coupang)', '네이버': 'var(--naver)', '직접판매': 'var(--navy)', '기타': 'var(--ink-mute)' };
 
   async function loadAnalytics() {
@@ -375,268 +330,8 @@
     </div>`).join('');
   }
 
-  /**
-   * ===================================================
-   * 정산 (월별 / 3개월 / 6개월)
-   * ===================================================
-   */
-  let settlePeriodType = 'month';
-  let settleOffset = 0;
-
-  async function loadSettlement() {
-    try {
-      const data = await callApi('getSettlement', { periodType: settlePeriodType, offset: settleOffset });
-      if (data.error) throw new Error(data.error);
-      renderSettlement(data);
-    } catch (e) {
-      showToast('정산 데이터 불러오기 실패: ' + e.message);
-    }
-  }
-
-  function renderSettlement(data) {
-    document.getElementById('settleLabel').textContent = data.label;
-
-    const totalEl = document.getElementById('settleTotal');
-    totalEl.querySelector('.settle-total-amount').textContent = formatWon(data.total.amount) + '원';
-    totalEl.querySelector('.settle-total-count').textContent = formatWon(data.total.count) + '개 판매';
-
-    const channelEl = document.getElementById('settleChannel');
-    if (!data.byChannel.length) {
-      channelEl.innerHTML = `<div class="settle-empty">해당 기간에 매출이 없어요</div>`;
-    } else {
-      channelEl.innerHTML = data.byChannel.map(c => {
-        const color = CHANNEL_COLORS[c.channel] || 'var(--ink-mute)';
-        return `<div class="channel-row">
-          <div class="channel-top">
-            <div class="channel-name"><span class="channel-dot" style="background:${color}"></span>${c.channel}</div>
-            <div class="channel-pct mono">${formatWon(c.amount)}원 · ${formatWon(c.count)}개</div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-
-    const productEl = document.getElementById('settleProduct');
-    if (!data.byProduct.length) {
-      productEl.innerHTML = `<div class="settle-empty">해당 기간에 판매된 상품이 없어요</div>`;
-    } else {
-      productEl.innerHTML = data.byProduct.map(p => {
-        const channelLines = p.byChannel.map(c => `<div class="settle-product-channel"><span>${c.channel}</span><span class="mono">${formatWon(c.amount)}원 · ${formatWon(c.count)}개</span></div>`).join('');
-        return `<div class="settle-product-group">
-          <div class="settle-product-name">${p.product}</div>
-          <div class="settle-product-total mono">${formatWon(p.amount)}원 · ${formatWon(p.count)}개</div>
-          ${channelLines}
-        </div>`;
-      }).join('');
-    }
-  }
-
-  document.querySelectorAll('.settle-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.settle-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      settlePeriodType = btn.dataset.period;
-      settleOffset = 0;
-      loadSettlement();
-    });
-  });
-
-  document.getElementById('settlePrev').addEventListener('click', () => {
-    settleOffset -= 1;
-    loadSettlement();
-  });
-
-  document.getElementById('settleNext').addEventListener('click', () => {
-    if (settleOffset >= 0) return;
-    settleOffset += 1;
-    loadSettlement();
-  });
-
-  document.getElementById('settleDownload').addEventListener('click', async (btn) => {
-    const dlBtn = document.getElementById('settleDownload');
-    dlBtn.disabled = true;
-    try {
-      const data = await callApi('exportSettlement', { periodType: settlePeriodType, offset: settleOffset });
-      if (data.error) throw new Error(data.error);
-      window.open(data.url, '_blank');
-    } catch (e) {
-      showToast('엑셀 다운로드 실패: ' + e.message);
-    } finally {
-      dlBtn.disabled = false;
-    }
-  });
-
-  // ============================================================
-  // ✅ 2026-07-21 채널 정산표(xls) 업로드 기능
-  // 아그네스/아임홈/랩아이엠그라운드 등 브랜드별로 매 분기 손으로 취합하던
-  // 실제 정산 리포트(Overall 시트)를 그대로 업로드해서 보관/조회할 수 있게 함.
-  // 위 정산 카드(월정산 등)는 주문 데이터 기반 추정치이고, 이건 채널에서 받은 실제 수치임.
-  // ============================================================
-  let uploadBrand = '랩 아이엠그라운드';
-
-  document.getElementById('uploadBrandTabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.upload-brand-tab');
-    if (!btn) return;
-    document.querySelectorAll('.upload-brand-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    uploadBrand = btn.dataset.brand;
-    loadSettlementUpload();
-  });
-
-  document.getElementById('settleUploadDownload').addEventListener('click', async () => {
-    const dlBtn = document.getElementById('settleUploadDownload');
-    dlBtn.disabled = true;
-    try {
-      const data = await callApi('exportSettlementUpload', { brand: uploadBrand });
-      if (data.error) throw new Error(data.error);
-      window.open(data.url, '_blank');
-    } catch (e) {
-      showToast('엑셀 다운로드 실패: ' + e.message);
-    } finally {
-      dlBtn.disabled = false;
-    }
-  });
-
-  document.getElementById('settleUploadBtn').addEventListener('click', async () => {
-    const fileInput = document.getElementById('settleUploadFile');
-    const file = fileInput.files[0];
-    if (!file) { showToast('파일을 선택해주세요'); return; }
-    const btn = document.getElementById('settleUploadBtn');
-    btn.disabled = true;
-    btn.textContent = '처리 중...';
-    try {
-      const rows = await parseSettlementFile(file);
-      if (!rows.length) throw new Error('Overall 시트에서 월별 데이터를 찾지 못했어요');
-      const res = await postApi('saveSettlementUpload', { brand: uploadBrand, rows: rows, sourceLabel: file.name });
-      if (res.error) throw new Error(res.error);
-      showToast(res.savedRows + '건 저장됐어요');
-      fileInput.value = '';
-      loadSettlementUpload();
-    } catch (e) {
-      showToast('업로드 실패: ' + e.message);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '업로드';
-    }
-  });
-
-  function parseSettlementFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const wb = XLSX.read(e.target.result, { type: 'array' });
-          const sheetName = wb.SheetNames.includes('Overall') ? 'Overall' : wb.SheetNames[0];
-          const sheet = wb.Sheets[sheetName];
-          const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-          const rows = [];
-          let currentChannel = '';
-          let started = false;
-
-          for (const r of grid) {
-            const col0 = String(r[0] || '').trim();
-            const col1 = String(r[1] || '').trim();
-
-            if (!started) {
-              if (col0 === '구분' && col1 === '월') started = true;
-              continue;
-            }
-            if (col1 === '총 합계액') break;
-            if (col0) currentChannel = col0;
-            if (!/^\d{2}월$/.test(col1)) continue;
-
-            rows.push({
-              채널: currentChannel,
-              월: col1,
-              신용카드: Number(r[2]) || 0,
-              현금영수증: Number(r[3]) || 0,
-              기타: Number(r[4]) || 0,
-              프로모션지원금: Number(r[5]) || 0,
-              매출합계: Number(r[7]) || 0,
-              수수료: Number(r[9]) || 0,
-              기타비용: Number(r[10]) || 0,
-              비용합계: Number(r[11]) || 0
-            });
-          }
-          resolve(rows);
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = () => reject(new Error('파일을 읽지 못했어요'));
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  async function loadSettlementUpload() {
-    try {
-      const data = await callApi('getSettlementUpload', { brand: uploadBrand });
-      if (data.error) throw new Error(data.error);
-      renderSettlementUpload(data);
-    } catch (e) {
-      showToast('정산표 불러오기 실패: ' + e.message);
-    }
-  }
-
-  function renderSettlementUpload(data) {
-    const metaEl = document.getElementById('uploadMeta');
-    const tableEl = document.getElementById('settleUploadTable');
-
-    if (!data.rows || !data.rows.length) {
-      metaEl.textContent = '아직 업로드된 정산표가 없어요. 엑셀 파일을 올려주세요.';
-      tableEl.innerHTML = '';
-      return;
-    }
-
-    const uploadedDate = data.uploadedAt ? new Date(data.uploadedAt).toLocaleString('ko-KR') : '-';
-    metaEl.textContent = (data.sourceLabel || '') + ' · ' + uploadedDate + ' 업로드';
-
-    const channelOrder = [];
-    const byChannel = {};
-    data.rows.forEach(r => {
-      if (!byChannel[r.채널]) { byChannel[r.채널] = []; channelOrder.push(r.채널); }
-      byChannel[r.채널].push(r);
-    });
-
-    const sumFields = ['신용카드', '현금영수증', '기타', '프로모션지원금', '매출합계', '수수료', '기타비용', '비용합계'];
-    const grand = {}; sumFields.forEach(f => grand[f] = 0);
-
-    let bodyHtml = '';
-    channelOrder.forEach(ch => {
-      const chRows = byChannel[ch].slice().sort((a, b) => a.월.localeCompare(b.월));
-      const chTotal = {}; sumFields.forEach(f => chTotal[f] = 0);
-
-      chRows.forEach(r => {
-        sumFields.forEach(f => chTotal[f] += Number(r[f] || 0));
-        bodyHtml += '<tr>' +
-          '<td>' + ch + '</td><td>' + r.월 + '</td>' +
-          '<td>' + formatWon(r.신용카드) + '</td><td>' + formatWon(r.현금영수증) + '</td><td>' + formatWon(r.기타) + '</td>' +
-          '<td>' + formatWon(r.매출합계) + '</td><td>' + formatWon(r.수수료) + '</td><td>' + formatWon(r.기타비용) + '</td><td>' + formatWon(r.비용합계) + '</td>' +
-        '</tr>';
-      });
-
-      sumFields.forEach(f => grand[f] += chTotal[f]);
-      bodyHtml += '<tr class="channel-total-row">' +
-        '<td>' + ch + '</td><td>합계</td>' +
-        '<td>' + formatWon(chTotal.신용카드) + '</td><td>' + formatWon(chTotal.현금영수증) + '</td><td>' + formatWon(chTotal.기타) + '</td>' +
-        '<td>' + formatWon(chTotal.매출합계) + '</td><td>' + formatWon(chTotal.수수료) + '</td><td>' + formatWon(chTotal.기타비용) + '</td><td>' + formatWon(chTotal.비용합계) + '</td>' +
-      '</tr>';
-    });
-
-    bodyHtml += '<tr class="grand-total-row">' +
-      '<td colspan="2">총 합계</td>' +
-      '<td>' + formatWon(grand.신용카드) + '</td><td>' + formatWon(grand.현금영수증) + '</td><td>' + formatWon(grand.기타) + '</td>' +
-      '<td>' + formatWon(grand.매출합계) + '</td><td>' + formatWon(grand.수수료) + '</td><td>' + formatWon(grand.기타비용) + '</td><td>' + formatWon(grand.비용합계) + '</td>' +
-    '</tr>';
-
-    tableEl.innerHTML = '<thead><tr>' +
-      '<th>채널</th><th>월</th><th>신용카드</th><th>현금영수증</th><th>기타</th><th>매출합계</th><th>수수료</th><th>기타비용</th><th>비용합계</th>' +
-      '</tr></thead><tbody>' + bodyHtml + '</tbody>';
-  }
 
   loadAnalytics();
-  loadSettlement();
-  loadSettlementUpload();
 </script>
 </body>
 </html>
