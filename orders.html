@@ -287,9 +287,13 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
         대시보드
       </a>
-      <a href="orders.html" class="nav-item active">
+      <a href="orders.html?type=general" class="nav-item" id="navGeneralOrder">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
-        주문
+        일반주문
+      </a>
+      <a href="orders.html?type=fresh" class="nav-item" id="navFreshOrder">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M4.5 6l15 12"/><path d="M19.5 6l-15 12"/></svg>
+        신선주문
       </a>
       <a href="inventory.html" class="nav-item">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
@@ -302,6 +306,10 @@
       <a href="settlement.html" class="nav-item">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg>
         정산
+      </a>
+      <a href="returns.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v1"/></svg>
+        반품접수
       </a>
       <a href="profile.html" class="nav-item">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
@@ -455,6 +463,7 @@
 <script src="common.js"></script>
 <script>
   let currentStatus = '신규';
+  let currentShippingType = null;
   let currentOrders = [];
   let activeOrderId = null;
   let groupBySite = false;
@@ -470,7 +479,10 @@
       const isUnsentFilter = status === '__unsent__';
       const isReturnFilter = status === '__return__';
       const needsClientFilter = isUnsentFilter || isReturnFilter;
-      const data = await callApi('listOrders', (status && !needsClientFilter) ? { status } : {});
+      const listParams = {};
+      if (status && !needsClientFilter) listParams.status = status;
+      if (currentShippingType) listParams.shippingType = currentShippingType;
+      const data = await callApi('listOrders', listParams);
       if (data.error) throw new Error(data.error);
       currentOrders = isUnsentFilter
         ? (data || []).filter(o => o['채널전송상태'] === '실패')
@@ -930,6 +942,23 @@
     }
   })();
 
+  // ?type=general|fresh 로 들어오면 일반주문/신선주문 페이지로 동작
+  (function applyShippingTypeFilter() {
+    const params = new URLSearchParams(window.location.search);
+    const typeParam = params.get('type');
+    if (typeParam === 'general') {
+      currentShippingType = '일반';
+      document.getElementById('navGeneralOrder').classList.add('active');
+      document.querySelector('h1.page-title').textContent = '일반주문';
+      document.title = '일반주문 - 셀러허브';
+    } else if (typeParam === 'fresh') {
+      currentShippingType = '신선';
+      document.getElementById('navFreshOrder').classList.add('active');
+      document.querySelector('h1.page-title').textContent = '신선주문';
+      document.title = '신선주문 - 셀러허브';
+    }
+  })();
+
   function showDetail(o) {
     document.getElementById('detailProduct').textContent = o['상품명'] || '-';
     document.getElementById('detailSub').innerHTML =
@@ -1370,7 +1399,8 @@
         quantity: qty,
         buyerName: document.getElementById('oBuyerName').value.trim(),
         buyerPhone: document.getElementById('oBuyerPhone').value.trim(),
-        buyerAddress: document.getElementById('oBuyerAddress').value.trim()
+        buyerAddress: document.getElementById('oBuyerAddress').value.trim(),
+        shippingType: currentShippingType || '일반'
       });
       if (res.error) throw new Error(res.error);
       showToast('주문이 등록됐어요' + (matched ? '' : ' (재고 연동 없이 이름만 기록됐어요)'));

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>반품접수 - 셀러허브</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F1B2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .form-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px;}
+  .api-note{background:var(--amber-soft); color:#8a5c14; font-size:12px; font-weight:600; padding:9px 14px;
+    border-radius:10px; margin-bottom:14px; line-height:1.5;}
+
+  .pickup-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:10px;}
+  .pickup-top{display:flex; align-items:center; gap:6px; margin-bottom:8px;}
+  .pickup-date{font-size:11px; color:var(--ink-mute); margin-left:auto;}
+  .pickup-name{font-size:15px; font-weight:700; margin-bottom:4px;}
+  .pickup-meta{font-size:12px; color:var(--ink-mute); display:flex; gap:10px; flex-wrap:wrap;}
+  .pickup-meta b{color:var(--ink); font-weight:600;}
+  .pickup-msg{font-size:11.5px; color:var(--ink-mute); margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);}
+
+  .badge.pending{background:var(--amber-soft); color:#8a5c14;}
+  .badge.done{background:var(--success-soft); color:var(--success);}
+
+  .section-title{font-size:13px; font-weight:800; color:var(--ink-mute); margin:20px 0 8px;}
+  .section-title:first-child{margin-top:0;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand"><span class="dot"></span>SELLER HUB</div>
+    <h1 class="page-title">반품접수</h1>
+  </header>
+
+  <main>
+    <div class="api-note" id="apiNote">
+      아직 택배사 API가 등록되지 않았어요. 지금 접수하면 임시 접수번호로 저장되고, 택배사 API키를 등록하면 그 다음부터는 자동으로 실제 접수·전송까지 처리돼요.
+    </div>
+
+    <div class="form-card">
+      <div class="field">
+        <label>택배사</label>
+        <select id="rpCourier">
+          <option value="CJ대한통운">CJ대한통운</option>
+        </select>
+      </div>
+      <div class="field"><label>수취인명(상대방)</label><input type="text" id="rpName" placeholder="반품 수거지 이름"></div>
+      <div class="field"><label>연락처</label><input type="text" id="rpPhone" placeholder="예: 010-1234-5678"></div>
+      <div class="field"><label>주소</label><input type="text" id="rpAddress" placeholder="반품 수거 주소"></div>
+      <div class="field"><label>반품 사유</label><textarea id="rpReason" placeholder="예: 단순 변심, 상품 불량 등 (선택)"></textarea></div>
+      <button class="btn btn-danger" id="rpSubmit" style="width:100%;">반품 접수</button>
+    </div>
+
+    <div class="section-title">접수 내역</div>
+    <div id="pickupList"></div>
+    <div class="empty" id="pickupEmpty" style="display:none;">
+      <b>접수된 반품이 없어요</b>
+      위 양식으로 반품 수거를 접수해보세요
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <nav class="bottom">
+    <div class="bottom-inner">
+      <a href="index.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        대시보드
+      </a>
+      <a href="orders.html?type=general" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M9 13a3 3 0 0 0 6 0"/></svg>
+        일반주문
+      </a>
+      <a href="orders.html?type=fresh" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M4.5 6l15 12"/><path d="M19.5 6l-15 12"/></svg>
+        신선주문
+      </a>
+      <a href="inventory.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        재고
+      </a>
+      <a href="insights.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+        종합
+      </a>
+      <a href="settlement.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg>
+        정산
+      </a>
+      <a href="returns.html" class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v1"/></svg>
+        반품접수
+      </a>
+      <a href="profile.html" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 5-6 8-6s6.5 1.5 8 6"/></svg>
+        내정보
+      </a>
+    </div>
+  </nav>
+
+</div>
+
+<script src="common.js"></script>
+<script>
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  function formatDate(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return String(v);
+    return (d.getMonth() + 1) + '.' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  async function loadPickups() {
+    const listEl = document.getElementById('pickupList');
+    const emptyEl = document.getElementById('pickupEmpty');
+    try {
+      const data = await callApi('listReturnPickups', {});
+      if (data.error) throw new Error(data.error);
+      const rows = data || [];
+      if (!rows.length) {
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+      emptyEl.style.display = 'none';
+      listEl.innerHTML = rows.map(function (r) {
+        const isReal = r['접수상태'] === '접수완료';
+        return '<div class="pickup-card">' +
+          '<div class="pickup-top"><span class="badge">' + esc(r['택배사']) + '</span>' +
+          '<span class="badge ' + (isReal ? 'done' : 'pending') + '">' + esc(r['접수상태']) + '</span>' +
+          '<span class="pickup-date">' + formatDate(r['접수일시']) + '</span></div>' +
+          '<div class="pickup-name">' + esc(r['수취인명']) + '</div>' +
+          '<div class="pickup-meta"><span><b>연락처</b> ' + esc(r['연락처']) + '</span></div>' +
+          '<div class="pickup-meta"><span>' + esc(r['주소']) + '</span></div>' +
+          (r['픽업번호'] ? '<div class="pickup-meta"><span><b>접수번호</b> ' + esc(r['픽업번호']) + '</span></div>' : '') +
+          (r['비고'] ? '<div class="pickup-msg">' + esc(r['비고']) + '</div>' : '') +
+          '</div>';
+      }).join('');
+    } catch (e) {
+      showToast('불러오기 실패: ' + e.message);
+    }
+  }
+
+  document.getElementById('rpSubmit').addEventListener('click', async () => {
+    const name = document.getElementById('rpName').value.trim();
+    const phone = document.getElementById('rpPhone').value.trim();
+    const address = document.getElementById('rpAddress').value.trim();
+    const reason = document.getElementById('rpReason').value.trim();
+    const courierName = document.getElementById('rpCourier').value;
+
+    if (!name || !phone || !address) {
+      showToast('수취인명, 연락처, 주소를 입력해주세요');
+      return;
+    }
+
+    const btn = document.getElementById('rpSubmit');
+    btn.disabled = true;
+    try {
+      const res = await callApi('createReturnPickup', { name, phone, address, reason, courierName });
+      if (res.error) throw new Error(res.error);
+      showToast(res.isReal ? '반품 접수가 완료됐어요' : '임시로 접수됐어요 (API 등록 전)');
+      document.getElementById('rpName').value = '';
+      document.getElementById('rpPhone').value = '';
+      document.getElementById('rpAddress').value = '';
+      document.getElementById('rpReason').value = '';
+      loadPickups();
+    } catch (e) {
+      showToast('접수 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  loadPickups();
+</script>
+</body>
+</html>
