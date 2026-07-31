@@ -527,6 +527,7 @@
     return `<div class="order-card" data-order-id="${o['주문ID']}">
       <div class="order-top">
         <span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널'] || '기타'}</span>
+        ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''}
         <span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">송장미전송</span>' : ''}
         <span class="order-date">${dateStr}</span>
@@ -551,7 +552,7 @@
     const checked = selectedIds.has(o['주문ID']) ? 'checked' : '';
     return `<tr data-order-id="${o['주문ID']}">
       <td class="col-check"><input type="checkbox" class="row-check" data-row-check="${o['주문ID']}" ${checked}></td>
-      <td>${o['판매채널'] || '기타'}</td>
+      <td>${o['판매채널'] || '기타'} ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''}</td>
       <td><span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">미전송</span>' : ''}</td>
       <td>${o['상품명'] || '-'}</td>
@@ -962,7 +963,7 @@
   function showDetail(o) {
     document.getElementById('detailProduct').textContent = o['상품명'] || '-';
     document.getElementById('detailSub').innerHTML =
-      `<span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널']||'기타'}</span> · 주문번호 ${o['채널주문번호']||'-'}`;
+      `<span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널']||'기타'}</span> ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''} · 주문번호 ${o['채널주문번호']||'-'}`;
 
     let itemsHtml = '';
     if (o['품목목록JSON']) {

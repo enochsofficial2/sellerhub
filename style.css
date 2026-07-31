@@ -89,6 +89,8 @@ nav.bottom{position:fixed; bottom:0; left:0; right:0; background:var(--surface);
 .badge.status-shipped{background:var(--success-soft); color:var(--success);}
 .badge.status-return{background:var(--danger-soft); color:var(--danger);}
 .badge.status-cancel{background:#E7E9EE; color:var(--ink-mute);}
+.badge.fresh{background:#E1F0FA; color:#1B6FA8;}
+[data-theme="dark"] .badge.fresh{background:#12293A; color:#6BB6E8;}
 
 /* 바텀시트(모달) 공통 */
 .sheet-overlay{position:fixed; inset:0; background:rgba(15,27,46,0.45); z-index:90; opacity:0; pointer-events:none; transition:opacity .2s;}
