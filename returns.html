@@ -164,7 +164,7 @@
     const btn = document.getElementById('rpSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('createReturnPickup', { name, phone, address, reason, courierName });
+      const res = await postApi('createReturnPickup', { name, phone, address, reason, courierName });
       if (res.error) throw new Error(res.error);
       showToast(res.isReal ? '반품 접수가 완료됐어요' : '임시로 접수됐어요 (API 등록 전)');
       document.getElementById('rpName').value = '';

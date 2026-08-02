@@ -1305,7 +1305,7 @@
         const matched = productList.find(p => p['상품명'] === productName);
 
         try {
-          const res = await callApi('createOrderManual', {
+          const res = await postApi('createOrderManual', {
             channel: String(r['쇼핑몰'] || '').trim() || '직접판매',
             productId: matched ? matched['상품ID'] : '',
             productName: productName,
@@ -1393,7 +1393,7 @@
     const btn = document.getElementById('addOrderSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('createOrderManual', {
+      const res = await postApi('createOrderManual', {
         channel: document.getElementById('oChannel').value,
         productId: matched ? matched['상품ID'] : '',
         productName: productName,
