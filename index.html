@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('sellerhub_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>셀러허브</title>
 <link rel="manifest" href="manifest.json">
@@ -113,6 +115,14 @@
 </style>
 </head>
 <body>
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="dot"></span>SELLER HUB</div>
+    <h2>로그인이 필요해요</h2>
+    <p>등록된 구글 계정으로 로그인해야 주문 데이터를 볼 수 있어요</p>
+    <div id="googleSignInBtn"></div>
+  </div>
+</div>
 <div class="app">
 
   <header class="top">
@@ -238,7 +248,7 @@
     const refreshBtn = document.getElementById('refreshBtn');
     refreshBtn.classList.add('spinning');
     try {
-      const data = await callApi('getSummary', { period });
+      const data = await api('getSummary', { period });
       if (data.error) throw new Error(data.error);
 
       document.getElementById('heroLabel').textContent = periodLabels[period];
@@ -267,7 +277,7 @@
           return `<div class="cat-row">
             <div class="cat-row-top">
               <div>
-                <div class="cat-name"><span class="cat-rank">${i + 1}</span>${c.cat}</div>
+                <div class="cat-name"><span class="cat-rank">${i + 1}</span>${esc(c.cat)}</div>
                 <div class="cat-count mono">${formatWon(c.count)}건</div>
               </div>
               <div class="cat-amount mono">${formatWon(c.amount)}원</div>
@@ -351,16 +361,24 @@
     </div>`;
   }
 
+  // "오늘"을 UTC 기준으로 계산하면, 자정~오전 9시(KST) 사이엔 new Date().toISOString()이
+  // 아직 "어제" 날짜를 가리켜서(서버가 등록일을 Asia/Seoul 기준으로 저장하는 것과 어긋남)
+  // 그 시간대에 접속하면 오늘 막대가 하이라이트되지 않는 버그가 있었습니다.
+  // en-CA 로케일은 YYYY-MM-DD 형식을 그대로 주기 때문에 별도 조립 없이 바로 씀.
+  function todayKeyKST() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+  }
+
   function renderTrend(trend) {
     const chartEl = document.getElementById('trendChart');
     const maxCount = Math.max(...trend.map(t => t.count), 1);
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayKey = todayKeyKST();
 
     chartEl.innerHTML = trend.map(t => {
       const heightPct = Math.max(4, Math.round((t.count / maxCount) * 100));
       const isToday = t.date === todayKey;
       const dayLabel = Number(t.date.slice(8, 10));
-      return `<div class="trend-bar-wrap" title="${t.date}: ${t.count}건">
+      return `<div class="trend-bar-wrap" title="${esc(t.date)}: ${formatWon(t.count)}건">
         <div class="trend-bar ${t.count > 0 ? (isToday ? 'today' : 'has-value') : ''}" style="height:${heightPct}%"></div>
         <div class="trend-day">${dayLabel}</div>
       </div>`;
@@ -370,7 +388,7 @@
   // 처리할일/처리현황/추이차트를 API 1번으로 한번에 불러옴 (왕복 줄여서 속도 개선)
   async function loadDashboardExtras() {
     try {
-      const data = await callApi('getDashboardExtras', {});
+      const data = await api('getDashboardExtras', {});
       if (data.error) throw new Error(data.error);
       renderTodo(data.orders);
       renderPipeline(data.orders);

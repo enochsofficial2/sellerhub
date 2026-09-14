@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('sellerhub_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>반품접수 - 셀러허브</title>
 <link rel="manifest" href="manifest.json">
@@ -33,6 +35,14 @@
 </style>
 </head>
 <body>
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="dot"></span>SELLER HUB</div>
+    <h2>로그인이 필요해요</h2>
+    <p>등록된 구글 계정으로 로그인해야 주문 데이터를 볼 수 있어요</p>
+    <div id="googleSignInBtn"></div>
+  </div>
+</div>
 <div class="app">
 
   <header class="top">
@@ -110,7 +120,8 @@
 
 <script src="common.js"></script>
 <script>
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  // esc()는 common.js에 이미 있는 공용 함수를 그대로 씁니다 (여기서 따로 재정의하지 않음 — 두 벌로 있으면
+  // 나중에 한쪽만 고치는 실수가 생기기 쉬움).
 
   function formatDate(v) {
     if (!v) return '';
@@ -123,9 +134,11 @@
     const listEl = document.getElementById('pickupList');
     const emptyEl = document.getElementById('pickupEmpty');
     try {
-      const data = await callApi('listReturnPickups', {});
-      if (data.error) throw new Error(data.error);
-      const rows = data || [];
+      const data = await api('listReturnPickups', {});
+      if (data && data.error) throw new Error(data.error);
+      // 서버가 에러 객체나 예상 못한 형태를 돌려줄 수도 있으므로 배열이 아니면 빈 목록으로 처리
+      // (예전엔 data가 배열이 아닐 때 rows.length에서 그대로 예외가 나서 화면이 깨졌음)
+      const rows = Array.isArray(data) ? data : [];
       if (!rows.length) {
         listEl.innerHTML = '';
         emptyEl.style.display = 'block';
@@ -133,7 +146,10 @@
       }
       emptyEl.style.display = 'none';
       listEl.innerHTML = rows.map(function (r) {
-        const isReal = r['접수상태'] === '접수완료';
+        // trim() + startsWith()로 비교: 시트 값에 공백이 섞여 들어오거나("접수완료 "),
+        // 상태값이 "접수완료(수동)"처럼 접두어만 같은 변형으로 저장돼도 "완료"로 잘못 안 뜨게 함
+        const status = String(r['접수상태'] || '').trim();
+        const isReal = status.startsWith('접수완료');
         return '<div class="pickup-card">' +
           '<div class="pickup-top"><span class="badge">' + esc(r['택배사']) + '</span>' +
           '<span class="badge ' + (isReal ? 'done' : 'pending') + '">' + esc(r['접수상태']) + '</span>' +
@@ -150,7 +166,11 @@
     }
   }
 
+  let rpSubmitting = false; // 연타/이중 네트워크 요청 방지 (btn.disabled만으론 일부 모바일에서 두 번 눌리는 경우가 있음)
+
   document.getElementById('rpSubmit').addEventListener('click', async () => {
+    if (rpSubmitting) return;
+
     const name = document.getElementById('rpName').value.trim();
     const phone = document.getElementById('rpPhone').value.trim();
     const address = document.getElementById('rpAddress').value.trim();
@@ -161,11 +181,25 @@
       showToast('수취인명, 연락처, 주소를 입력해주세요');
       return;
     }
+    // 최소한의 형식 검증 — 숫자/하이픈만 허용, 자릿수 대략 확인 (완전한 검증은 아니지만
+    // 명백한 오타(문자 섞임, 너무 짧은 번호)는 이 단계에서 걸러서 헛수거 접수를 줄임
+    const phoneDigits = phone.replace(/[^0-9]/g, '');
+    if (!/^[0-9-\s]+$/.test(phone) || phoneDigits.length < 9 || phoneDigits.length > 11) {
+      showToast('연락처 형식을 확인해주세요 (숫자만, 9~11자리)');
+      return;
+    }
+    if (address.length < 5) {
+      showToast('주소를 더 정확히 입력해주세요');
+      return;
+    }
+
+    if (!confirm(`${name} (${phone})\n${address}\n\n이 정보로 반품 수거를 접수할까요?`)) return;
 
     const btn = document.getElementById('rpSubmit');
+    rpSubmitting = true;
     btn.disabled = true;
     try {
-      const res = await postApi('createReturnPickup', { name, phone, address, reason, courierName });
+      const res = await api('createReturnPickup', { name, phone, address, reason, courierName });
       if (res.error) throw new Error(res.error);
       showToast(res.isReal ? '반품 접수가 완료됐어요' : '임시로 접수됐어요 (API 등록 전)');
       document.getElementById('rpName').value = '';
@@ -177,6 +211,7 @@
       showToast('접수 실패: ' + e.message);
     } finally {
       btn.disabled = false;
+      rpSubmitting = false;
     }
   });
 

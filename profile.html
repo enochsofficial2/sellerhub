@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('sellerhub_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>내정보 - 셀러허브</title>
 <link rel="manifest" href="manifest.json">
@@ -24,6 +26,14 @@
 </style>
 </head>
 <body>
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="dot"></span>SELLER HUB</div>
+    <h2>로그인이 필요해요</h2>
+    <p>등록된 구글 계정으로 로그인해야 주문 데이터를 볼 수 있어요</p>
+    <div id="googleSignInBtn"></div>
+  </div>
+</div>
 <div class="app">
 
   <header class="top">
@@ -114,7 +124,7 @@
 
   async function loadStoreInfo() {
     try {
-      const info = await callApi('getStoreInfo', {});
+      const info = await api('getStoreInfo', {});
       if (info.error) return;
       document.getElementById('viewStoreName').textContent = info.name || '미설정';
       document.getElementById('viewStorePhone').textContent = info.phone || '-';
@@ -135,7 +145,7 @@
     const btn = document.getElementById('storeSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('saveStoreInfo', {
+      const res = await api('saveStoreInfo', {
         name: document.getElementById('storeName').value.trim(),
         phone: document.getElementById('storePhone').value.trim(),
         address: document.getElementById('storeAddress').value.trim(),

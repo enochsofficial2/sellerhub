@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('sellerhub_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>정산 - 셀러허브</title>
 <link rel="manifest" href="manifest.json">
@@ -104,7 +106,13 @@
   .settle-upload-table th:first-child, .settle-upload-table td:first-child{text-align:left;}
   .settle-upload-table thead th{color:var(--ink-mute); font-weight:700; font-size:10.5px;}
   .settle-upload-table tr.channel-total-row{font-weight:800; background:var(--bg);}
-  .settle-upload-table tr.grand-total-row{font-weight:800; background:var(--amber); color:#fff;}
+  .settle-upload-table tr.grand-total-row{font-weight:800; background:var(--navy); color:#fff;}
+  .settle-upload-table th[scope="col"]{white-space:nowrap;}
+  .settle-loading{opacity:0.45; pointer-events:none; transition:opacity .15s;}
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+    clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+  .upload-year-input{width:64px; padding:8px 6px; border:1px solid var(--line); border-radius:8px;
+    font-size:12px; font-family:inherit; background:var(--bg); color:var(--ink); text-align:center;}
 
   @media (min-width: 900px) {
     #settleUploadCard{grid-column: 1 / -1;}
@@ -113,6 +121,14 @@
 </style>
 </head>
 <body>
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="dot"></span>SELLER HUB</div>
+    <h2>로그인이 필요해요</h2>
+    <p>등록된 구글 계정으로 로그인해야 주문 데이터를 볼 수 있어요</p>
+    <div id="googleSignInBtn"></div>
+  </div>
+</div>
 <div class="app">
 
   <header class="top">
@@ -137,14 +153,14 @@
         <div class="settle-label" id="settleLabel">-</div>
         <button class="settle-nav-btn" id="settleNext">다음 ›</button>
       </div>
-      <div class="settle-total" id="settleTotal">
+      <div class="settle-total" id="settleTotal" aria-live="polite">
         <div class="settle-total-amount mono">-</div>
         <div class="settle-total-count">-</div>
       </div>
       <div class="settle-subtitle">사이트별 매출</div>
-      <div id="settleChannel"></div>
+      <div id="settleChannel" aria-live="polite"></div>
       <div class="settle-subtitle">상품별 매출</div>
-      <div id="settleProduct"></div>
+      <div id="settleProduct" aria-live="polite"></div>
       <button class="settle-download-btn" id="settleDownload">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
         엑셀 다운로드
@@ -162,12 +178,17 @@
         <button class="upload-brand-tab" data-brand="아그네스">아그네스</button>
       </div>
       <div class="upload-file-row">
+        <label for="settleUploadYear" class="sr-only">정산 연도</label>
+        <input type="number" id="settleUploadYear" class="upload-year-input" value="2026" min="2020" max="2100" aria-label="정산 연도">
+        <label for="settleUploadFile" class="sr-only">정산표 엑셀 파일 선택</label>
         <input type="file" id="settleUploadFile" class="upload-file-input" accept=".xls,.xlsx">
         <button class="upload-btn" id="settleUploadBtn">업로드</button>
       </div>
-      <div class="upload-meta" id="uploadMeta">불러오는 중...</div>
+      <div class="upload-meta" id="uploadMeta" aria-live="polite">불러오는 중...</div>
       <div class="settle-upload-scroll">
-        <table class="settle-upload-table" id="settleUploadTable"></table>
+        <table class="settle-upload-table" id="settleUploadTable">
+          <caption class="sr-only">브랜드별 채널 정산 내역</caption>
+        </table>
       </div>
       <button class="settle-download-btn" id="settleUploadDownload">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
@@ -228,14 +249,22 @@
    */
   let settlePeriodType = 'month';
   let settleOffset = 0;
+  let settleReqToken = 0;
 
   async function loadSettlement() {
+    const myToken = ++settleReqToken;
+    const cardEl = document.getElementById('settleCard');
+    if (cardEl) cardEl.classList.add('settle-loading');
     try {
-      const data = await callApi('getSettlement', { periodType: settlePeriodType, offset: settleOffset });
+      const data = await api('getSettlement', { periodType: settlePeriodType, offset: settleOffset });
+      if (myToken !== settleReqToken) return; // 더 최신 요청이 이미 진행 중 — 이 응답은 버림
       if (data.error) throw new Error(data.error);
       renderSettlement(data);
     } catch (e) {
+      if (myToken !== settleReqToken) return;
       showToast('정산 데이터 불러오기 실패: ' + e.message);
+    } finally {
+      if (myToken === settleReqToken && cardEl) cardEl.classList.remove('settle-loading');
     }
   }
 
@@ -254,7 +283,7 @@
         const color = CHANNEL_COLORS[c.channel] || 'var(--ink-mute)';
         return `<div class="channel-row">
           <div class="channel-top">
-            <div class="channel-name"><span class="channel-dot" style="background:${color}"></span>${c.channel}</div>
+            <div class="channel-name"><span class="channel-dot" style="background:${color}"></span>${esc(c.channel)}</div>
             <div class="channel-pct mono">${formatWon(c.amount)}원 · ${formatWon(c.count)}개</div>
           </div>
         </div>`;
@@ -266,9 +295,9 @@
       productEl.innerHTML = `<div class="settle-empty">해당 기간에 판매된 상품이 없어요</div>`;
     } else {
       productEl.innerHTML = data.byProduct.map(p => {
-        const channelLines = p.byChannel.map(c => `<div class="settle-product-channel"><span>${c.channel}</span><span class="mono">${formatWon(c.amount)}원 · ${formatWon(c.count)}개</span></div>`).join('');
+        const channelLines = p.byChannel.map(c => `<div class="settle-product-channel"><span>${esc(c.channel)}</span><span class="mono">${formatWon(c.amount)}원 · ${formatWon(c.count)}개</span></div>`).join('');
         return `<div class="settle-product-group">
-          <div class="settle-product-name">${p.product}</div>
+          <div class="settle-product-name">${esc(p.product)}</div>
           <div class="settle-product-total mono">${formatWon(p.amount)}원 · ${formatWon(p.count)}개</div>
           ${channelLines}
         </div>`;
@@ -297,14 +326,19 @@
     loadSettlement();
   });
 
-  document.getElementById('settleDownload').addEventListener('click', async (btn) => {
+  document.getElementById('settleDownload').addEventListener('click', async () => {
     const dlBtn = document.getElementById('settleDownload');
     dlBtn.disabled = true;
+    // 모바일 팝업 차단 대응: 사용자 클릭 이벤트 안에서 동기적으로 탭을 먼저 열고,
+    // URL이 준비되면 그 탭의 location만 바꿉니다 (await 뒤에 여는 건 팝업으로 막힘).
+    const win = window.open('', '_blank');
     try {
-      const data = await callApi('exportSettlement', { periodType: settlePeriodType, offset: settleOffset });
+      const data = await api('exportSettlement', { periodType: settlePeriodType, offset: settleOffset });
       if (data.error) throw new Error(data.error);
-      window.open(data.url, '_blank');
+      if (!data.url) throw new Error('다운로드 주소를 받지 못했어요');
+      if (win) win.location.href = data.url; else window.open(data.url, '_blank');
     } catch (e) {
+      if (win) win.close();
       showToast('엑셀 다운로드 실패: ' + e.message);
     } finally {
       dlBtn.disabled = false;
@@ -331,11 +365,14 @@
   document.getElementById('settleUploadDownload').addEventListener('click', async () => {
     const dlBtn = document.getElementById('settleUploadDownload');
     dlBtn.disabled = true;
+    const win = window.open('', '_blank');
     try {
-      const data = await callApi('exportSettlementUpload', { brand: uploadBrand });
+      const data = await api('exportSettlementUpload', { brand: uploadBrand });
       if (data.error) throw new Error(data.error);
-      window.open(data.url, '_blank');
+      if (!data.url) throw new Error('다운로드 주소를 받지 못했어요');
+      if (win) win.location.href = data.url; else window.open(data.url, '_blank');
     } catch (e) {
+      if (win) win.close();
       showToast('엑셀 다운로드 실패: ' + e.message);
     } finally {
       dlBtn.disabled = false;
@@ -346,13 +383,26 @@
     const fileInput = document.getElementById('settleUploadFile');
     const file = fileInput.files[0];
     if (!file) { showToast('파일을 선택해주세요'); return; }
+
+    // 기존에 이 브랜드에 저장된 정산표가 있으면 덮어쓰기 전에 확인
+    if (uploadHasExistingData) {
+      const ok = confirm(uploadBrand + ' 브랜드에 이미 저장된 정산표가 있어요. 덮어쓸까요?');
+      if (!ok) return;
+    }
+
+    const yearInput = document.getElementById('settleUploadYear');
+    const year = String(toNum(yearInput.value) || new Date().getFullYear());
+
     const btn = document.getElementById('settleUploadBtn');
+    const brandTabs = document.querySelectorAll('.upload-brand-tab');
     btn.disabled = true;
     btn.textContent = '처리 중...';
+    brandTabs.forEach(b => b.disabled = true); // 업로드 중 브랜드 전환 시 파일이 엉뚱한 브랜드에 저장되는 것 방지
+
     try {
-      const rows = await parseSettlementFile(file);
+      const rows = await parseSettlementFile(file, year);
       if (!rows.length) throw new Error('Overall 시트에서 월별 데이터를 찾지 못했어요');
-      const res = await postApi('saveSettlementUpload', { brand: uploadBrand, rows: rows, sourceLabel: file.name });
+      const res = await api('saveSettlementUpload', { brand: uploadBrand, rows: rows, sourceLabel: file.name });
       if (res.error) throw new Error(res.error);
       showToast(res.savedRows + '건 저장됐어요');
       fileInput.value = '';
@@ -362,10 +412,11 @@
     } finally {
       btn.disabled = false;
       btn.textContent = '업로드';
+      brandTabs.forEach(b => b.disabled = false);
     }
   });
 
-  function parseSettlementFile(file) {
+  function parseSettlementFile(file, year) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -389,19 +440,23 @@
             }
             if (col1 === '총 합계액') break;
             if (col0) currentChannel = col0;
-            if (!/^\d{2}월$/.test(col1)) continue;
+            // 1~9월은 "1월"처럼 두 자리가 아닐 수 있으므로 \d{1,2}로 매칭 (기존 \d{2}는 1~9월을 누락시킴)
+            if (!/^\d{1,2}월$/.test(col1)) continue;
 
             rows.push({
               채널: currentChannel,
+              연도: year,
               월: col1,
-              신용카드: Number(r[2]) || 0,
-              현금영수증: Number(r[3]) || 0,
-              기타: Number(r[4]) || 0,
-              프로모션지원금: Number(r[5]) || 0,
-              매출합계: Number(r[7]) || 0,
-              수수료: Number(r[9]) || 0,
-              기타비용: Number(r[10]) || 0,
-              비용합계: Number(r[11]) || 0
+              // toNum(): "1,234,567" / "₩1,234,567" / "(1,234)" 같은 서식이 섞인 셀도 안전하게 숫자로 변환
+              // (Number(v)||0 은 이런 값들을 조용히 0으로 만들어버려서 실제 수치가 사라지는 버그가 있었음)
+              신용카드: toNum(r[2]),
+              현금영수증: toNum(r[3]),
+              기타: toNum(r[4]),
+              프로모션지원금: toNum(r[5]),
+              매출합계: toNum(r[7]),
+              수수료: toNum(r[9]),
+              기타비용: toNum(r[10]),
+              비용합계: toNum(r[11])
             });
           }
           resolve(rows);
@@ -414,13 +469,25 @@
     });
   }
 
+  // saveSettlementUpload 덮어쓰기 전 확인창 표시 여부를 loadSettlementUpload가 채워둠
+  let uploadHasExistingData = false;
+  let settleUploadReqToken = 0;
+
   async function loadSettlementUpload() {
+    const myToken = ++settleUploadReqToken;
+    const cardEl = document.getElementById('settleUploadCard');
+    if (cardEl) cardEl.classList.add('settle-loading');
     try {
-      const data = await callApi('getSettlementUpload', { brand: uploadBrand });
+      const data = await api('getSettlementUpload', { brand: uploadBrand });
+      if (myToken !== settleUploadReqToken) return;
       if (data.error) throw new Error(data.error);
+      uploadHasExistingData = !!(data.rows && data.rows.length);
       renderSettlementUpload(data);
     } catch (e) {
+      if (myToken !== settleUploadReqToken) return;
       showToast('정산표 불러오기 실패: ' + e.message);
+    } finally {
+      if (myToken === settleUploadReqToken && cardEl) cardEl.classList.remove('settle-loading');
     }
   }
 
@@ -430,12 +497,12 @@
 
     if (!data.rows || !data.rows.length) {
       metaEl.textContent = '아직 업로드된 정산표가 없어요. 엑셀 파일을 올려주세요.';
-      tableEl.innerHTML = '';
+      tableEl.innerHTML = '<caption class="sr-only">브랜드별 채널 정산 내역</caption>';
       return;
     }
 
     const uploadedDate = data.uploadedAt ? new Date(data.uploadedAt).toLocaleString('ko-KR') : '-';
-    metaEl.textContent = (data.sourceLabel || '') + ' · ' + uploadedDate + ' 업로드';
+    metaEl.textContent = esc(data.sourceLabel || '') + ' · ' + uploadedDate + ' 업로드';
 
     const channelOrder = [];
     const byChannel = {};
@@ -444,27 +511,38 @@
       byChannel[r.채널].push(r);
     });
 
+    // 월만으로 정렬하면 연도가 다른 데이터가 섞였을 때 순서가 뒤죽박죽이 되므로 연도+월로 정렬
+    function periodKey(r) {
+      const y = String(r.연도 || '0000');
+      const m = String(parseInt(r.월, 10) || 0).padStart(2, '0');
+      return y + m;
+    }
+
     const sumFields = ['신용카드', '현금영수증', '기타', '프로모션지원금', '매출합계', '수수료', '기타비용', '비용합계'];
     const grand = {}; sumFields.forEach(f => grand[f] = 0);
 
     let bodyHtml = '';
     channelOrder.forEach(ch => {
-      const chRows = byChannel[ch].slice().sort((a, b) => a.월.localeCompare(b.월));
+      const chRows = byChannel[ch].slice().sort((a, b) => periodKey(a).localeCompare(periodKey(b)));
       const chTotal = {}; sumFields.forEach(f => chTotal[f] = 0);
+      const chSafe = esc(ch);
 
       chRows.forEach(r => {
-        sumFields.forEach(f => chTotal[f] += Number(r[f] || 0));
+        sumFields.forEach(f => chTotal[f] += toNum(r[f]));
+        const periodLabel = (r.연도 ? esc(r.연도) + '.' : '') + esc(r.월);
         bodyHtml += '<tr>' +
-          '<td>' + ch + '</td><td>' + r.월 + '</td>' +
+          '<td>' + chSafe + '</td><td>' + periodLabel + '</td>' +
           '<td>' + formatWon(r.신용카드) + '</td><td>' + formatWon(r.현금영수증) + '</td><td>' + formatWon(r.기타) + '</td>' +
+          '<td>' + formatWon(r.프로모션지원금) + '</td>' +
           '<td>' + formatWon(r.매출합계) + '</td><td>' + formatWon(r.수수료) + '</td><td>' + formatWon(r.기타비용) + '</td><td>' + formatWon(r.비용합계) + '</td>' +
         '</tr>';
       });
 
       sumFields.forEach(f => grand[f] += chTotal[f]);
       bodyHtml += '<tr class="channel-total-row">' +
-        '<td>' + ch + '</td><td>합계</td>' +
+        '<td>' + chSafe + '</td><td>합계</td>' +
         '<td>' + formatWon(chTotal.신용카드) + '</td><td>' + formatWon(chTotal.현금영수증) + '</td><td>' + formatWon(chTotal.기타) + '</td>' +
+        '<td>' + formatWon(chTotal.프로모션지원금) + '</td>' +
         '<td>' + formatWon(chTotal.매출합계) + '</td><td>' + formatWon(chTotal.수수료) + '</td><td>' + formatWon(chTotal.기타비용) + '</td><td>' + formatWon(chTotal.비용합계) + '</td>' +
       '</tr>';
     });
@@ -472,11 +550,13 @@
     bodyHtml += '<tr class="grand-total-row">' +
       '<td colspan="2">총 합계</td>' +
       '<td>' + formatWon(grand.신용카드) + '</td><td>' + formatWon(grand.현금영수증) + '</td><td>' + formatWon(grand.기타) + '</td>' +
+      '<td>' + formatWon(grand.프로모션지원금) + '</td>' +
       '<td>' + formatWon(grand.매출합계) + '</td><td>' + formatWon(grand.수수료) + '</td><td>' + formatWon(grand.기타비용) + '</td><td>' + formatWon(grand.비용합계) + '</td>' +
     '</tr>';
 
-    tableEl.innerHTML = '<thead><tr>' +
-      '<th>채널</th><th>월</th><th>신용카드</th><th>현금영수증</th><th>기타</th><th>매출합계</th><th>수수료</th><th>기타비용</th><th>비용합계</th>' +
+    tableEl.innerHTML = '<caption class="sr-only">브랜드별 채널 정산 내역</caption><thead><tr>' +
+      '<th scope="col">채널</th><th scope="col">월</th><th scope="col">신용카드</th><th scope="col">현금영수증</th><th scope="col">기타</th>' +
+      '<th scope="col">프로모션지원금</th><th scope="col">매출합계</th><th scope="col">수수료</th><th scope="col">기타비용</th><th scope="col">비용합계</th>' +
       '</tr></thead><tbody>' + bodyHtml + '</tbody>';
   }
 
