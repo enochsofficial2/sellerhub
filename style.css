@@ -155,3 +155,19 @@ nav.bottom{position:fixed; bottom:0; left:0; right:0; background:var(--surface);
   .refresh-btn{right:32px !important;}
   .fab{right:32px !important;}
 }
+
+/* ===== 로그인 게이트 (모든 화면 공통) ===== */
+body.auth-locked{overflow:hidden;}
+body.auth-locked .app, body.auth-locked nav.bottom{filter:blur(3px); pointer-events:none; user-select:none;}
+
+.auth-overlay{position:fixed; inset:0; background:rgba(13,20,32,0.55); z-index:200;
+  display:none; align-items:center; justify-content:center; padding:20px;}
+.auth-overlay.show{display:flex;}
+.auth-card{background:var(--surface); border-radius:20px; padding:36px 28px; max-width:340px; width:100%;
+  text-align:center; box-shadow:0 20px 60px rgba(15,27,46,0.3);}
+.auth-card .auth-brand{display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px;
+  letter-spacing:0.1em; color:var(--amber); font-weight:700; margin-bottom:18px;}
+.auth-card .auth-brand .dot{width:6px; height:6px; border-radius:50%; background:var(--amber);}
+.auth-card h2{font-size:18px; margin:0 0 8px;}
+.auth-card p{font-size:13.5px; color:var(--ink-mute); margin:0 0 22px;}
+#googleSignInBtn{display:flex; justify-content:center;}
