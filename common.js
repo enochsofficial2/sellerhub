@@ -1,7 +1,7 @@
 // ============================================
 // 여기에 5단계에서 받은 웹앱 URL을 넣으세요 (모든 화면 공통)
 // ============================================
-const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwRZji-smstP6UoksLjgJHoeLt0pLPG6KW3rQIQSV9R6P-mEOc6x63NxP53hw1vnNOsIQ/exec";
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbz7JXTIAZVgKlLEMN3tnUfjjsVBrNvQm1xe6mQM5cUrkvE_-EKZDalnIAmMrgSCSI5ipA/exec";
 
 // ============================================
 // ⚠️ 필수 설정: Google OAuth 클라이언트 ID
