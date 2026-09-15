@@ -10,7 +10,7 @@ const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwRZji-smstP6UoksLjg
 // 승인된 자바스크립트 원본에 https://enochsofficial2.github.io 를 등록해야 합니다.
 // 이 값을 채우기 전까지는 로그인이 동작하지 않습니다.
 // ============================================
-const GOOGLE_CLIENT_ID = "REPLACE_ME.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "460110329707-gqj3obhea11ijseip6q2d3q1efmaa398.apps.googleusercontent.com";
 
 const AUTH_STORAGE_KEY = 'sellerhub_id_token';
 const AUTH_EMAIL_KEY = 'sellerhub_email';
