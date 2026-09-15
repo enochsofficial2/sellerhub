@@ -6,7 +6,7 @@
 // ⚠️ 여기에 로그인을 허용할 구글 이메일을 넣으세요. 이 목록에 없는 계정은
 // 로그인 자체는 되어도 verifyUser()에서 거부됩니다.
 const ALLOWED_EMAILS = [
-  'enochsofficial2@gmail.com',
+  'your-email@gmail.com',
   // 'qtg19955@gmail.com',   // 필요하면 주석 해제
 ];
 
