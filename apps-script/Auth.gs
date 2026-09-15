@@ -11,7 +11,7 @@ const ALLOWED_EMAILS = [
 ];
 
 // common.js의 GOOGLE_CLIENT_ID와 반드시 같은 값이어야 합니다.
-const OAUTH_CLIENT_ID = 'REPLACE_ME.apps.googleusercontent.com';
+const OAUTH_CLIENT_ID = '460110329707-gqj3obhea11ijseip6q2d3q1efmaa398.apps.googleusercontent.com';
 
 /**
  * 프론트에서 보낸 Google ID 토큰을 검증하고, 통과하면 이메일을 반환합니다.
