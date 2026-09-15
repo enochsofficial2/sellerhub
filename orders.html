@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('sellerhub_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>주문관리 - 셀러허브</title>
 <link rel="manifest" href="manifest.json">
@@ -153,6 +155,14 @@
 </style>
 </head>
 <body>
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="dot"></span>SELLER HUB</div>
+    <h2>로그인이 필요해요</h2>
+    <p>등록된 구글 계정으로 로그인해야 주문 데이터를 볼 수 있어요</p>
+    <div id="googleSignInBtn"></div>
+  </div>
+</div>
 <div class="app">
 
   <header class="top">
@@ -483,7 +493,7 @@
       const listParams = {};
       if (status && !needsClientFilter) listParams.status = status;
       if (currentShippingType) listParams.shippingType = currentShippingType;
-      const data = await callApi('listOrders', listParams);
+      const data = await api('listOrders', listParams);
       if (data.error) throw new Error(data.error);
       currentOrders = isUnsentFilter
         ? (data || []).filter(o => o['채널전송상태'] === '실패')
@@ -525,23 +535,23 @@
   function orderCardHtml(o) {
     const d = o['주문일시'] ? new Date(o['주문일시']) : null;
     const dateStr = d ? (d.getMonth()+1) + '.' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') : '';
-    return `<div class="order-card" data-order-id="${o['주문ID']}">
+    return `<div class="order-card" data-order-id="${esc(o['주문ID'])}">
       <div class="order-top">
-        <span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널'] || '기타'}</span>
+        <span class="${channelBadgeClass(o['판매채널'])}">${esc(o['판매채널']) || '기타'}</span>
         ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''}
-        <span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
+        <span class="${statusBadgeClass(o['주문상태'])}">${esc(o['주문상태']) || '신규'}</span>
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">송장미전송</span>' : ''}
-        <span class="order-date">${dateStr}</span>
+        <span class="order-date">${esc(dateStr)}</span>
       </div>
-      <div class="order-product">${o['상품명'] || '-'}</div>
+      <div class="order-product">${esc(o['상품명']) || '-'}</div>
       <div class="order-meta">
         <span>수량 <b>${formatWon(o['수량'])}개</b></span>
-        <span>구매자 <b>${o['구매자명'] || '-'}</b></span>
+        <span>구매자 <b>${esc(o['구매자명']) || '-'}</b></span>
       </div>
       <div class="order-bottom">
         <span class="order-amount mono">${formatWon(o['판매가'])}원</span>
         ${o['주문상태'] === '신규'
-          ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">바로 송장출력</button>`
+          ? `<button class="quick-ship-btn" data-quick-ship="${esc(o['주문ID'])}">바로 송장출력</button>`
           : ``}
       </div>
     </div>`;
@@ -551,23 +561,23 @@
     const d = o['주문일시'] ? new Date(o['주문일시']) : null;
     const dateStr = d ? (d.getMonth()+1) + '.' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') : '';
     const checked = selectedIds.has(o['주문ID']) ? 'checked' : '';
-    return `<tr data-order-id="${o['주문ID']}">
-      <td class="col-check"><input type="checkbox" class="row-check" data-row-check="${o['주문ID']}" ${checked}></td>
-      <td>${o['판매채널'] || '기타'} ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''}</td>
-      <td><span class="${statusBadgeClass(o['주문상태'])}">${o['주문상태'] || '신규'}</span>
+    return `<tr data-order-id="${esc(o['주문ID'])}">
+      <td class="col-check"><input type="checkbox" class="row-check" data-row-check="${esc(o['주문ID'])}" ${checked}></td>
+      <td>${esc(o['판매채널']) || '기타'} ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''}</td>
+      <td><span class="${statusBadgeClass(o['주문상태'])}">${esc(o['주문상태']) || '신규'}</span>
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">미전송</span>' : ''}</td>
-      <td>${o['상품명'] || '-'}</td>
-      <td class="${o['구매자명'] ? 'copyable' : ''}" ${o['구매자명'] ? `data-copy="${o['구매자명']}"` : ''}>${o['구매자명'] || '-'}</td>
-      <td class="mono ${o['구매자연락처'] ? 'copyable' : ''}" ${o['구매자연락처'] ? `data-copy="${o['구매자연락처']}"` : ''}>${o['구매자연락처'] || '-'}</td>
-      <td class="${o['구매자주소'] ? 'copyable' : ''}" ${o['구매자주소'] ? `data-copy="${o['구매자주소']}"` : ''} style="max-width:220px;">${o['구매자주소'] || '-'}</td>
+      <td>${esc(o['상품명']) || '-'}</td>
+      <td class="${o['구매자명'] ? 'copyable' : ''}" ${o['구매자명'] ? `data-copy="${esc(o['구매자명'])}"` : ''}>${esc(o['구매자명']) || '-'}</td>
+      <td class="mono ${o['구매자연락처'] ? 'copyable' : ''}" ${o['구매자연락처'] ? `data-copy="${esc(o['구매자연락처'])}"` : ''}>${esc(o['구매자연락처']) || '-'}</td>
+      <td class="${o['구매자주소'] ? 'copyable' : ''}" ${o['구매자주소'] ? `data-copy="${esc(o['구매자주소'])}"` : ''} style="max-width:220px;">${esc(o['구매자주소']) || '-'}</td>
       <td>${formatWon(o['수량'])}개</td>
       <td class="col-amount">${formatWon(o['판매가'])}원</td>
-      <td>${dateStr}</td>
-      <td class="mono ${o['송장_송장번호'] ? 'copyable' : ''}" ${o['송장_송장번호'] ? `data-copy="${o['송장_송장번호']}"` : ''}>${o['송장_송장번호'] || '-'}</td>
-      <td class="delivery-status-cell" data-order-id-status="${o['주문ID']}">
-        ${o['송장_송장번호'] ? `<button class="delivery-check-btn" data-check-delivery="${o['주문ID']}">조회</button>` : '-'}
+      <td>${esc(dateStr)}</td>
+      <td class="mono ${o['송장_송장번호'] ? 'copyable' : ''}" ${o['송장_송장번호'] ? `data-copy="${esc(o['송장_송장번호'])}"` : ''}>${esc(o['송장_송장번호']) || '-'}</td>
+      <td class="delivery-status-cell" data-order-id-status="${esc(o['주문ID'])}">
+        ${o['송장_송장번호'] ? `<button class="delivery-check-btn" data-check-delivery="${esc(o['주문ID'])}">조회</button>` : '-'}
       </td>
-      <td>${o['주문상태'] === '신규' ? `<button class="quick-ship-btn" data-quick-ship="${o['주문ID']}">송장출력</button>` : ''}</td>
+      <td>${o['주문상태'] === '신규' ? `<button class="quick-ship-btn" data-quick-ship="${esc(o['주문ID'])}">송장출력</button>` : ''}</td>
     </tr>`;
   }
 
@@ -620,7 +630,7 @@
       });
       listEl.innerHTML = Object.keys(groups).sort().map(ch => {
         return `<div class="site-group-header">
-            <span class="${channelBadgeClass(ch)}">${ch}</span> ${groups[ch].length}건
+            <span class="${channelBadgeClass(ch)}">${esc(ch)}</span> ${groups[ch].length}건
           </div>` + groups[ch].map(orderCardHtml).join('');
       }).join('');
     }
@@ -638,7 +648,7 @@
       });
       tableBody.innerHTML = Object.keys(groups).sort().map(ch => {
         const headerRow = `<tr class="table-group-header-row"><td colspan="13">
-          <span class="${channelBadgeClass(ch)}">${ch}</span> ${groups[ch].length}건
+          <span class="${channelBadgeClass(ch)}">${esc(ch)}</span> ${groups[ch].length}건
         </td></tr>`;
         return headerRow + groups[ch].map(orderTableRowHtml).join('');
       }).join('');
@@ -736,7 +746,7 @@
       deliveryBtn.disabled = true;
       deliveryBtn.textContent = '...';
       try {
-        const res = await callApi('getDeliveryStatus', { orderId });
+        const res = await api('getDeliveryStatus', { orderId });
         const cell = deliveryBtn.closest('td');
         cell.textContent = res.error ? '조회 실패' : (res.available ? res.status : res.message);
       } catch (err) {
@@ -772,7 +782,7 @@
       if (o['주문상태'] === '신규') {
         // 아직 송장이 없는 신규 주문은 새로 발급
         try {
-          const res = await callApi('issueInvoice', { orderId: o['주문ID'] });
+          const res = await api('issueInvoice', { orderId: o['주문ID'] });
           if (!res.error) printIds.push(o['주문ID']);
         } catch (e) {}
       } else {
@@ -818,7 +828,7 @@
     let failCount = 0;
     for (const o of targets) {
       try {
-        const res = await callApi('issueInvoice', { orderId: o['주문ID'] });
+        const res = await api('issueInvoice', { orderId: o['주문ID'] });
         if (res.error) throw new Error(res.error);
         issuedIds.push(o['주문ID']);
       } catch (e) {
@@ -843,8 +853,8 @@
     document.getElementById('sendChannelList').innerHTML = channels.map(ch => {
       const count = targets.filter(o => (o['판매채널'] || '기타') === ch).length;
       return `<div class="collect-channel-row">
-        <input type="checkbox" value="${ch}" checked data-send-channel>
-        <span class="collect-channel-name">${ch}</span>
+        <input type="checkbox" value="${esc(ch)}" checked data-send-channel>
+        <span class="collect-channel-name">${esc(ch)}</span>
         <span class="collect-channel-badge on">${count}건</span>
       </div>`;
     }).join('');
@@ -871,7 +881,7 @@
     let successCount = 0, failCount = 0;
     for (const o of targets) {
       try {
-        const res = await callApi('sendInvoiceToChannel', { orderId: o['주문ID'] });
+        const res = await api('sendInvoiceToChannel', { orderId: o['주문ID'] });
         if (res.error) throw new Error(res.error);
         successCount++;
       } catch (e) {
@@ -964,7 +974,7 @@
   function showDetail(o) {
     document.getElementById('detailProduct').textContent = o['상품명'] || '-';
     document.getElementById('detailSub').innerHTML =
-      `<span class="${channelBadgeClass(o['판매채널'])}">${o['판매채널']||'기타'}</span> ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''} · 주문번호 ${o['채널주문번호']||'-'}`;
+      `<span class="${channelBadgeClass(o['판매채널'])}">${esc(o['판매채널'])||'기타'}</span> ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''} · 주문번호 ${esc(o['채널주문번호'])||'-'}`;
 
     let itemsHtml = '';
     if (o['품목목록JSON']) {
@@ -975,7 +985,7 @@
             <span style="margin-bottom:6px;">담긴 상품 (${items.length}개)</span>
             <div style="width:100%;">
               ${items.map(it => `<div style="display:flex; justify-content:space-between; font-size:12.5px; padding:4px 0;">
-                <span>${it.productName} ${it.sku ? '(' + it.sku + ')' : ''}</span>
+                <span>${esc(it.productName)} ${it.sku ? '(' + esc(it.sku) + ')' : ''}</span>
                 <span>${formatWon(it.quantity)}개 · ${formatWon(it.price)}원</span>
               </div>`).join('')}
             </div>
@@ -984,15 +994,16 @@
       } catch (e) {}
     }
 
+    const productLinkUrl = safeUrl(o['상품링크']);
     document.getElementById('detailBody').innerHTML = `
-      <div class="detail-row"><span>구매자</span><span>${o['구매자명']||'-'}</span></div>
-      <div class="detail-row"><span>연락처</span><span>${o['구매자연락처']||'-'}</span></div>
-      <div class="detail-row"><span>배송지</span><span>${o['구매자주소']||'-'}</span></div>
+      <div class="detail-row"><span>구매자</span><span>${esc(o['구매자명'])||'-'}</span></div>
+      <div class="detail-row"><span>연락처</span><span>${esc(o['구매자연락처'])||'-'}</span></div>
+      <div class="detail-row"><span>배송지</span><span>${esc(o['구매자주소'])||'-'}</span></div>
       <div class="detail-row"><span>수량 / 금액</span><span>${formatWon(o['수량'])}개 · ${formatWon(o['판매가'])}원</span></div>
-      ${o['상품링크'] ? `<div class="detail-row"><span>상품페이지</span><span><a href="${o['상품링크']}" target="_blank" rel="noopener" style="color:var(--navy); text-decoration:underline;">바로가기 →</a></span></div>` : ''}
+      ${productLinkUrl ? `<div class="detail-row"><span>상품페이지</span><span><a href="${productLinkUrl}" target="_blank" rel="noopener" style="color:var(--navy); text-decoration:underline;">바로가기 →</a></span></div>` : ''}
       ${itemsHtml}
-      <div class="detail-row"><span>현재 상태</span><span>${o['주문상태']||'신규'}</span></div>
-      ${o['채널전송상태'] ? `<div class="detail-row"><span>채널 전송</span><span style="color:${o['채널전송상태']==='실패' ? 'var(--danger)' : 'inherit'}">${o['채널전송상태']}</span></div>` : ''}
+      <div class="detail-row"><span>현재 상태</span><span>${esc(o['주문상태'])||'신규'}</span></div>
+      ${o['채널전송상태'] ? `<div class="detail-row"><span>채널 전송</span><span style="color:${o['채널전송상태']==='실패' ? 'var(--danger)' : 'inherit'}">${esc(o['채널전송상태'])}</span></div>` : ''}
       <div id="deliveryStatusRow"></div>
     `;
 
@@ -1038,11 +1049,11 @@
       deliveryBtn.textContent = '조회 중...';
       const rowEl = document.getElementById('deliveryStatusRow');
       try {
-        const res = await callApi('getDeliveryStatus', { orderId: o['주문ID'] });
+        const res = await api('getDeliveryStatus', { orderId: o['주문ID'] });
         if (res.error) throw new Error(res.error);
-        rowEl.innerHTML = `<div class="detail-row"><span>배송현황</span><span>${res.available ? res.status : res.message}</span></div>`;
+        rowEl.innerHTML = `<div class="detail-row"><span>배송현황</span><span>${esc(res.available ? res.status : res.message)}</span></div>`;
       } catch (e) {
-        rowEl.innerHTML = `<div class="detail-row"><span>배송현황</span><span>조회 실패: ${e.message}</span></div>`;
+        rowEl.innerHTML = `<div class="detail-row"><span>배송현황</span><span>조회 실패: ${esc(e.message)}</span></div>`;
       } finally {
         deliveryBtn.disabled = false;
         deliveryBtn.textContent = '배송현황 조회';
@@ -1060,7 +1071,7 @@
       retryBtn.disabled = true;
       retryBtn.textContent = '재전송 중...';
       try {
-        const res = await callApi('retryChannelSync', { orderId: activeOrderId });
+        const res = await api('retryChannelSync', { orderId: activeOrderId });
         if (res.error) throw new Error(res.error);
         showToast(res.channelSync && res.channelSync.success ? '재전송 성공' : '재전송 실패: ' + (res.channelSync ? res.channelSync.error : ''));
         closeSheet('sheetOverlay', 'detailSheet');
@@ -1084,7 +1095,7 @@
       const reason = prompt('보류 사유를 입력해주세요 (선택)') || '';
       holdBtn.disabled = true;
       try {
-        const res = await callApi('holdOrder', { orderId: activeOrderId, reason });
+        const res = await api('holdOrder', { orderId: activeOrderId, reason });
         if (res.error) throw new Error(res.error);
         showToast('보류 처리했어요');
         closeSheet('sheetOverlay', 'detailSheet');
@@ -1100,7 +1111,7 @@
     if (releaseHoldBtn) releaseHoldBtn.addEventListener('click', async () => {
       releaseHoldBtn.disabled = true;
       try {
-        const res = await callApi('releaseHold', { orderId: activeOrderId });
+        const res = await api('releaseHold', { orderId: activeOrderId });
         if (res.error) throw new Error(res.error);
         showToast('보류 해제했어요 - 다시 신규 상태예요');
         closeSheet('sheetOverlay', 'detailSheet');
@@ -1116,7 +1127,7 @@
     if (completeReturnBtn) completeReturnBtn.addEventListener('click', async () => {
       completeReturnBtn.disabled = true;
       try {
-        const res = await callApi('completeReturn', { orderId: activeOrderId });
+        const res = await api('completeReturn', { orderId: activeOrderId });
         if (res.error) throw new Error(res.error);
         showToast('반품완료 처리됐어요 - 재고가 복원됐어요');
         closeSheet('sheetOverlay', 'detailSheet');
@@ -1151,7 +1162,7 @@
     const btn = document.getElementById('shipSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('issueInvoice', { orderId: activeOrderId });
+      const res = await api('issueInvoice', { orderId: activeOrderId });
       if (res.error) throw new Error(res.error);
 
       showToast(res.isReal
@@ -1173,7 +1184,7 @@
     const btn = document.getElementById('sendSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('sendInvoiceToChannel', { orderId: activeOrderId });
+      const res = await api('sendInvoiceToChannel', { orderId: activeOrderId });
       if (res.error) throw new Error(res.error);
 
       if (res.channelSync && res.channelSync.attempted) {
@@ -1202,7 +1213,7 @@
     const btn = document.getElementById('returnSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('receiveReturn', { orderId: activeOrderId, reason });
+      const res = await api('receiveReturn', { orderId: activeOrderId, reason });
       if (res.error) throw new Error(res.error);
       showToast('반품 접수 완료');
       closeSheet('returnOverlay', 'returnSheet');
@@ -1225,7 +1236,7 @@
     const btn = document.getElementById('cancelSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('cancelOrder', { orderId: activeOrderId, reason });
+      const res = await api('cancelOrder', { orderId: activeOrderId, reason });
       if (res.error) throw new Error(res.error);
       showToast('취소 처리됐어요');
       closeSheet('cancelOverlay', 'cancelSheet');
@@ -1254,14 +1265,14 @@
   async function loadChannelListForCollect() {
     const listEl = document.getElementById('collectChannelList');
     try {
-      const channels = await callApi('listChannels', {});
+      const channels = await api('listChannels', {});
       if (channels.error) throw new Error(channels.error);
       listEl.dataset.loaded = '1';
       listEl.innerHTML = channels.map(ch => {
         const isOn = ch['활성여부'] === 'Y';
         return `<div class="collect-channel-row">
-          <input type="checkbox" value="${ch['채널명']}" ${isOn ? 'checked' : ''} data-collect-channel>
-          <span class="collect-channel-name">${ch['채널명']}</span>
+          <input type="checkbox" value="${esc(ch['채널명'])}" ${isOn ? 'checked' : ''} data-collect-channel>
+          <span class="collect-channel-name">${esc(ch['채널명'])}</span>
           <span class="collect-channel-badge ${isOn ? 'on' : 'off'}">${isOn ? 'API 연동됨' : '연동 대기'}</span>
         </div>`;
       }).join('');
@@ -1290,7 +1301,7 @@
       if (!rows.length) { showToast('엑셀에 데이터가 없어요'); btn.disabled = false; btn.textContent = '엑셀 업로드해서 주문 추가'; return; }
 
       // 상품명 자동매칭용 상품 목록 확보
-      const products = await callApi('listProducts', {});
+      const products = await api('listProducts', {});
       const productList = products.error ? [] : products;
 
       btn.textContent = '업로드 중... (0/' + rows.length + ')';
@@ -1306,7 +1317,7 @@
         const matched = productList.find(p => p['상품명'] === productName);
 
         try {
-          const res = await postApi('createOrderManual', {
+          const res = await api('createOrderManual', {
             channel: String(r['쇼핑몰'] || '').trim() || '직접판매',
             productId: matched ? matched['상품ID'] : '',
             productName: productName,
@@ -1327,7 +1338,7 @@
       fileInput.value = '';
       loadOrders(currentStatus);
     } catch (e) {
-      resultEl.innerHTML = '엑셀 읽기 실패: ' + e.message;
+      resultEl.innerHTML = '엑셀 읽기 실패: ' + esc(e.message);
     } finally {
       btn.disabled = false;
       btn.textContent = '엑셀 업로드해서 주문 추가';
@@ -1345,19 +1356,19 @@
     resultEl.innerHTML = '';
 
     try {
-      const results = await callApi('collectSelectedOrders', { channels: checked.join(',') });
+      const results = await api('collectSelectedOrders', { channels: checked.join(',') });
       if (results.error) throw new Error(results.error);
 
       resultEl.innerHTML = results.map(r => {
-        if (r.success) return `<div>✅ ${r.channel}: ${r.count}건 수집</div>`;
-        return `<div>⚠️ ${r.channel}: ${r.message}</div>`;
+        if (r.success) return `<div>✅ ${esc(r.channel)}: ${formatWon(r.count)}건 수집</div>`;
+        return `<div>⚠️ ${esc(r.channel)}: ${esc(r.message)}</div>`;
       }).join('');
 
       const totalCollected = results.reduce((sum, r) => sum + (r.count || 0), 0);
       showToast(totalCollected > 0 ? `총 ${totalCollected}건 수집됐어요` : '새로 수집된 주문이 없어요');
       loadOrders(currentStatus);
     } catch (e) {
-      resultEl.innerHTML = '<div>수집 실패: ' + e.message + '</div>';
+      resultEl.innerHTML = '<div>수집 실패: ' + esc(e.message) + '</div>';
     } finally {
       btn.disabled = false;
       btn.textContent = '선택한 사이트에서 수집하기';
@@ -1367,11 +1378,11 @@
   let allProductsForOrder = [];
   async function loadProductsForOrderForm() {
     try {
-      const products = await callApi('listProducts', {});
+      const products = await api('listProducts', {});
       if (products.error) return;
       allProductsForOrder = products;
       document.getElementById('orderProductList').innerHTML =
-        products.map(p => `<option value="${p['상품명']}">재고 ${p['현재재고']}개</option>`).join('');
+        products.map(p => `<option value="${esc(p['상품명'])}">재고 ${formatWon(p['현재재고'])}개</option>`).join('');
     } catch (e) {}
   }
 
@@ -1394,7 +1405,7 @@
     const btn = document.getElementById('addOrderSubmit');
     btn.disabled = true;
     try {
-      const res = await postApi('createOrderManual', {
+      const res = await api('createOrderManual', {
         channel: document.getElementById('oChannel').value,
         productId: matched ? matched['상품ID'] : '',
         productName: productName,

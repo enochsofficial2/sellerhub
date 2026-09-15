@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('sellerhub_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>재고관리 - 셀러허브</title>
 <link rel="manifest" href="manifest.json">
@@ -60,6 +62,14 @@
 </style>
 </head>
 <body>
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="dot"></span>SELLER HUB</div>
+    <h2>로그인이 필요해요</h2>
+    <p>등록된 구글 계정으로 로그인해야 주문 데이터를 볼 수 있어요</p>
+    <div id="googleSignInBtn"></div>
+  </div>
+</div>
 <div class="app">
 
   <header class="top">
@@ -202,25 +212,33 @@
   async function loadProducts() {
     const listEl = document.getElementById('productList');
     try {
-      const products = await callApi('listProducts', {});
+      const products = await api('listProducts', {});
       if (products.error) throw new Error(products.error);
       allProducts = products;
-      renderProducts(products);
+      // 요약 카드(전체 상품/재고 부족)는 검색·브랜드 필터와 무관하게 항상 전체 기준으로 표시
+      renderSummary(allProducts);
+      applyFilters();
     } catch (e) {
       showToast('불러오기 실패: ' + e.message);
     }
   }
 
-  function renderProducts(products) {
-    const listEl = document.getElementById('productList');
+  // "전체 상품"/"재고 부족" 숫자는 필터된 목록이 아니라 항상 allProducts(전체) 기준으로 계산합니다.
+  // 예전엔 renderProducts(filtered)가 이 숫자까지 같이 계산해서, 브랜드탭/검색으로 화면을 좁히면
+  // "전체 상품" 라벨인데도 필터된 개수만 보여주는 불일치가 있었습니다.
+  function renderSummary(products) {
     document.getElementById('totalProductCount').textContent = products.length + '개';
     const lowStock = products.filter(p => Number(p['현재재고']) <= Number(p['안전재고'] || 0));
     document.getElementById('lowStockCount').textContent = lowStock.length + '개';
+  }
+
+  function renderProducts(products) {
+    const listEl = document.getElementById('productList');
 
     if (!products.length) {
       listEl.innerHTML = `<div class="empty">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8L12 3 3 8v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
-        <b>등록된 상품이 없어요</b>오른쪽 아래 + 버튼으로 첫 상품을 등록해보세요
+        <b>${allProducts.length ? '조건에 맞는 상품이 없어요' : '등록된 상품이 없어요'}</b>${allProducts.length ? '검색어나 브랜드 필터를 확인해보세요' : '오른쪽 아래 + 버튼으로 첫 상품을 등록해보세요'}
       </div>`;
       return;
     }
@@ -229,21 +247,25 @@
       const stock = Number(p['현재재고']) || 0;
       const safety = Number(p['안전재고']) || 0;
       const isLow = stock <= safety;
-      return `<div class="product-card ${isLow ? 'low' : ''}" data-id="${p['상품ID']}">
+      // 참고: 시트의 "카테고리ID" 컬럼에는 실제로 카테고리 "이름"이 그대로 들어있습니다(진짜 ID가 아님).
+      // 새 카테고리 추가 시에도 이름을 그대로 값으로 씁니다 — 당장 동작엔 문제 없지만
+      // 나중에 카테고리명을 바꿀 일이 생기면 상품마다 값을 다시 다 바꿔줘야 하니 컬럼명이 오해의 소지가 있습니다.
+      const categoryLabel = p['카테고리ID'] || '미분류';
+      return `<div class="product-card ${isLow ? 'low' : ''}" data-id="${esc(p['상품ID'])}">
         <div class="product-top">
           <div>
-            <div class="product-name">${p['상품명']}</div>
-            <div class="product-meta">${p['SKU'] ? 'SKU ' + p['SKU'] + ' · ' : ''}${p['카테고리ID'] || '미분류'}${p['브랜드'] ? ' · ' + p['브랜드'] : ''}</div>
+            <div class="product-name">${esc(p['상품명'])}</div>
+            <div class="product-meta">${p['SKU'] ? 'SKU ' + esc(p['SKU']) + ' · ' : ''}${esc(categoryLabel)}${p['브랜드'] ? ' · ' + esc(p['브랜드']) : ''}</div>
             ${isLow ? '<span class="low-badge">재고 부족</span>' : ''}
             ${p['신선상품여부'] === 'Y' ? '<span class="low-badge" style="color:#1F8A70; background:#DCF3EC;">신선/냉장</span>' : ''}
           </div>
           <div class="product-stock">
             <div class="product-stock-value mono">${stock}</div>
-            <div class="product-stock-unit">${p['단위'] || '개'}</div>
+            <div class="product-stock-unit">${esc(p['단위'] || '개')}</div>
           </div>
         </div>
         <div style="text-align:right; margin-top:8px;">
-          <button class="delete-product-btn" data-delete-id="${p['상품ID']}">삭제</button>
+          <button class="delete-product-btn" data-delete-id="${esc(p['상품ID'])}">삭제</button>
         </div>
       </div>`;
     }).join('');
@@ -279,10 +301,15 @@
       deleteBtn.disabled = true;
       deleteBtn.textContent = '삭제 중...';
       try {
-        const res = await callApi('deleteProduct', { productId: pid });
+        const res = await api('deleteProduct', { productId: pid });
         if (res.error) throw new Error(res.error);
         showToast('상품이 삭제됐어요');
-        loadProducts();
+        // 삭제는 이미 서버에서 성공했으므로, loadProducts()의 재조회가 실패하더라도
+        // 버튼이 "삭제 중..."에 멈춰있지 않도록 목록에서 먼저 직접 제거합니다(낙관적 갱신).
+        allProducts = allProducts.filter(x => x['상품ID'] !== pid);
+        renderSummary(allProducts);
+        applyFilters();
+        loadProducts().catch(() => {});
       } catch (err) {
         showToast('삭제 실패: ' + err.message);
         deleteBtn.disabled = false;
@@ -306,10 +333,10 @@
   // 카테고리 목록 불러오기
   (async function loadCategories() {
     try {
-      const cats = await callApi('listCategories', {});
+      const cats = await api('listCategories', {});
       if (cats.error || !cats.length) return;
       const sel = document.getElementById('pCategory');
-      sel.innerHTML = cats.map(c => `<option value="${c['카테고리명']}">${c['카테고리명']}</option>`).join('')
+      sel.innerHTML = cats.map(c => `<option value="${esc(c['카테고리명'])}">${esc(c['카테고리명'])}</option>`).join('')
         + '<option value="__new__">+ 새 카테고리 추가</option>';
     } catch (e) {}
   })();
@@ -319,7 +346,7 @@
     const name = prompt('새 카테고리 이름을 입력해주세요');
     if (!name) { e.target.value = '미분류'; return; }
     try {
-      const res = await callApi('addCategory', { name });
+      const res = await api('addCategory', { name });
       if (res.error) throw new Error(res.error);
       const opt = document.createElement('option');
       opt.value = name; opt.textContent = name;
@@ -342,7 +369,7 @@
     const btn = document.getElementById('addSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('createProduct', {
+      const res = await api('createProduct', {
         name,
         sku: document.getElementById('pSku').value.trim(),
         categoryId: document.getElementById('pCategory').value,
@@ -355,9 +382,14 @@
       if (res.error) throw new Error(res.error);
       showToast('상품이 등록됐어요');
       closeSheet('addOverlay', 'addSheet');
+      // 폼 전체를 초기화 (기존엔 pCategory/pSafety/pPrice가 안 지워져서 다음 상품 등록 때
+      // 이전 값이 그대로 남아있는 문제가 있었음)
       document.getElementById('pName').value = '';
       document.getElementById('pSku').value = '';
+      document.getElementById('pCategory').value = '미분류';
       document.getElementById('pStock').value = 0;
+      document.getElementById('pSafety').value = 5;
+      document.getElementById('pPrice').value = '';
       document.getElementById('pFresh').checked = false;
       document.getElementById('pBrand').value = '';
       loadProducts();
@@ -385,10 +417,21 @@
     if (!delta) { showToast('조정할 수량을 입력해주세요'); return; }
     if (!reason) { showToast('사유를 입력해주세요'); return; }
 
+    // 서버(adjustStock)도 하한을 막지만, 네트워크를 타기 전에 화면에 보이는 현재 재고 기준으로
+    // 미리 확인해서 헛된 요청과 오해를 줄입니다. (여러 탭/기기에서 동시에 조정 중이면
+    // 실제로는 서버 쪽 값이 다를 수 있으므로 최종 판단은 항상 서버가 함)
+    const currentStock = Number(document.getElementById('adjustCurrentStock').textContent) || 0;
+    const projected = currentStock + delta;
+    if (projected < 0) {
+      showToast(`현재 재고(${currentStock}개)보다 많이 뺄 수 없어요`);
+      return;
+    }
+    if (!confirm(`재고를 ${currentStock}개 → ${projected}개로 변경할까요?`)) return;
+
     const btn = document.getElementById('adjustSubmit');
     btn.disabled = true;
     try {
-      const res = await callApi('adjustStockManual', { productId: activeProductId, delta, reason });
+      const res = await api('adjustStockManual', { productId: activeProductId, delta, reason });
       if (res.error) throw new Error(res.error);
       showToast('재고가 반영됐어요');
       closeSheet('adjustOverlay', 'adjustSheet');

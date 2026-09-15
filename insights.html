@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>try{var _t=localStorage.getItem('sellerhub_theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>종합현황 - 셀러허브</title>
 <link rel="manifest" href="manifest.json">
@@ -59,57 +61,22 @@
   .reco-text{font-size:12.5px; line-height:1.6; color:rgba(255,255,255,0.9);}
   .reco-text b{color:#fff; font-weight:800;}
 
-  .settle-tabs{display:flex; gap:6px; margin-bottom:12px;}
-  .settle-tab{flex:1; padding:8px 0; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink-mute); font-size:12.5px; font-weight:700; cursor:pointer;}
-  .settle-tab.active{background:var(--amber); color:#fff; border-color:var(--amber);}
-
-  .settle-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
-  .settle-nav-btn{background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; color:var(--ink); cursor:pointer;}
-  .settle-label{font-size:13px; font-weight:800;}
-
-  .settle-total{background:var(--bg); border-radius:12px; padding:16px; text-align:center; margin-bottom:14px;}
-  .settle-total-amount{font-size:22px; font-weight:800; color:var(--amber);}
-  .settle-total-count{font-size:12px; color:var(--ink-mute); margin-top:4px;}
-
-  .settle-subtitle{font-size:12px; font-weight:800; color:var(--ink-mute); margin:14px 0 8px;}
-
-  .settle-product-group{margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--bg);}
-  .settle-product-group:last-child{border-bottom:0; margin-bottom:0; padding-bottom:0;}
-  .settle-product-name{font-size:13px; font-weight:700; margin-bottom:4px;}
-  .settle-product-total{font-size:12px; color:var(--ink-mute); font-weight:700; margin-bottom:6px;}
-  .settle-product-channel{display:flex; justify-content:space-between; font-size:11.5px; color:var(--ink-mute); padding:2px 0;}
-
-  .settle-download-btn{width:100%; margin-top:14px; padding:12px; border-radius:10px; border:none; background:var(--navy); color:#fff; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;}
-  .settle-empty{padding:14px 0; font-size:12.5px; color:var(--ink-mute); text-align:center;}
-
   @media (min-width: 900px) {
     main{display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start;}
     .insight-card{margin-bottom:0;}
     .reco-card{grid-column: 1 / -1;}
-    #settleCard{grid-column: 1 / -1;}
-  }
-
-  .upload-brand-tabs{display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;}
-  .upload-brand-tab{padding:7px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--ink-mute); font-size:12px; font-weight:700; cursor:pointer;}
-  .upload-brand-tab.active{background:var(--amber); color:#fff; border-color:var(--amber);}
-  .upload-file-row{display:flex; gap:8px; margin-bottom:12px; align-items:center;}
-  .upload-file-input{flex:1; font-size:12px; min-width:0;}
-  .upload-btn{padding:8px 14px; border-radius:8px; background:var(--navy); color:#fff; font-size:12px; font-weight:700; border:none; cursor:pointer; white-space:nowrap;}
-  .upload-meta{font-size:11px; color:var(--ink-mute); margin-bottom:10px;}
-  .settle-upload-scroll{overflow-x:auto;}
-  .settle-upload-table{width:100%; border-collapse:collapse; font-size:11.5px;}
-  .settle-upload-table th, .settle-upload-table td{padding:6px 5px; text-align:right; border-bottom:1px solid var(--bg); white-space:nowrap;}
-  .settle-upload-table th:first-child, .settle-upload-table td:first-child{text-align:left;}
-  .settle-upload-table thead th{color:var(--ink-mute); font-weight:700; font-size:10.5px;}
-  .settle-upload-table tr.channel-total-row{font-weight:800; background:var(--bg);}
-  .settle-upload-table tr.grand-total-row{font-weight:800; background:var(--amber); color:#fff;}
-
-  @media (min-width: 900px) {
-    #settleUploadCard{grid-column: 1 / -1;}
   }
 </style>
 </head>
 <body>
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand"><span class="dot"></span>SELLER HUB</div>
+    <h2>로그인이 필요해요</h2>
+    <p>등록된 구글 계정으로 로그인해야 주문 데이터를 볼 수 있어요</p>
+    <div id="googleSignInBtn"></div>
+  </div>
+</div>
 <div class="app">
 
   <header class="top">
@@ -205,7 +172,7 @@
 
   async function loadAnalytics() {
     try {
-      const data = await callApi('getAnalytics', { days: 30 });
+      const data = await api('getAnalytics', { days: 30 });
       if (data.error) throw new Error(data.error);
       renderTopProducts(data.topProducts);
       renderChannels(data.channelBreakdown);
@@ -222,12 +189,17 @@
       el.innerHTML = `<div class="empty" style="padding:20px;"><b>아직 데이터가 없어요</b>주문이 쌓이면 인기상품이 표시돼요</div>`;
       return;
     }
-    el.innerHTML = products.map((p, i) => {
-      const channelLine = (p.byChannel || []).map(c => `${c.channel} ${formatWon(c.count)}개`).join(' · ');
+    // 제목이 "TOP 5"인데 백엔드가 준 배열 순서를 그대로 다 뿌리고 있었어서(개수 제한 없음),
+    // 상품이 6개 이상이면 전부 나열되는 버그가 있었음. 또한 배열 순서가 항상 매출액순이라고
+    // 가정하지 않고 클라이언트에서 amount 기준으로 다시 정렬해서 순위 배지가 실제 금액순과
+    // 어긋나지 않게 함.
+    const top5 = products.slice().sort((a, b) => b.amount - a.amount).slice(0, 5);
+    el.innerHTML = top5.map((p, i) => {
+      const channelLine = (p.byChannel || []).map(c => `${esc(c.channel)} ${formatWon(c.count)}개`).join(' · ');
       return `<div class="rank-row">
       <div class="rank-badge">${i + 1}</div>
       <div class="rank-info">
-        <div class="rank-name">${p.name}</div>
+        <div class="rank-name">${esc(p.name)}</div>
         <div class="rank-sub mono">${formatWon(p.count)}개 판매</div>
         ${channelLine ? `<div style="font-size:11px; color:var(--ink-mute); margin-top:3px;">${channelLine}</div>` : ''}
       </div>
@@ -243,12 +215,14 @@
       return;
     }
     const total = channels.reduce((s, c) => s + c.amount, 0) || 1;
-    el.innerHTML = channels.map(c => {
+    // 매출 비중은 항상 큰 채널부터 보여주는 게 자연스러우므로 여기서도 amount 기준으로 방어적으로 정렬
+    const sorted = channels.slice().sort((a, b) => b.amount - a.amount);
+    el.innerHTML = sorted.map(c => {
       const pct = Math.round((c.amount / total) * 100);
       const color = CHANNEL_COLORS[c.channel] || 'var(--ink-mute)';
       return `<div class="channel-row">
         <div class="channel-top">
-          <div class="channel-name"><span class="channel-dot" style="background:${color}"></span>${c.channel}</div>
+          <div class="channel-name"><span class="channel-dot" style="background:${color}"></span>${esc(c.channel)}</div>
           <div class="channel-pct">${pct}% · ${formatWon(c.amount)}원</div>
         </div>
         <div class="channel-bar-track"><div class="channel-bar-fill" style="width:${pct}%; background:${color}"></div></div>
@@ -268,12 +242,12 @@
         .sort((a, b) => b.n - a.n)
         .slice(0, 2);
       const channelText = topChannels.length
-        ? topChannels.map(c => c.ch + ' ' + c.n).join(' · ')
+        ? topChannels.map(c => esc(c.ch) + ' ' + formatWon(c.n)).join(' · ')
         : '-';
 
       return `<div class="hour-block ${e.value === max && max > 0 ? 'peak' : ''}">
-        <div class="hour-block-label">${e.label}</div>
-        <div class="hour-block-value mono">${e.value}건</div>
+        <div class="hour-block-label">${esc(e.label)}</div>
+        <div class="hour-block-value mono">${formatWon(e.value)}건</div>
         <div class="hour-block-channels">${channelText}</div>
       </div>`;
     }).join('');
@@ -294,17 +268,20 @@
     }
 
     // 1. 채널 집중도 분석
-    if (channelBreakdown.length) {
-      const totalAmount = channelBreakdown.reduce((s, c) => s + c.amount, 0) || 1;
-      const top = channelBreakdown[0];
+    // amount 기준으로 정렬해서 "1위/2위"가 실제 금액순과 일치하도록 함 (renderChannels와 동일한 방어적 정렬)
+    const channelsSorted = channelBreakdown.slice().sort((a, b) => b.amount - a.amount);
+    if (channelsSorted.length) {
+      const totalAmount = channelsSorted.reduce((s, c) => s + c.amount, 0) || 1;
+      const top = channelsSorted[0];
       const topPct = Math.round((top.amount / totalAmount) * 100);
+      const topChName = esc(top.channel);
 
-      if (channelBreakdown.length === 1) {
-        items.push({ icon: '①', text: `현재 <b>${top.channel}</b> 채널에서만 매출이 발생하고 있어요. 다른 채널(11번가, 카페24 등)로 확장하면 새로운 고객층을 확보할 수 있어요.` });
+      if (channelsSorted.length === 1) {
+        items.push({ icon: '①', text: `현재 <b>${topChName}</b> 채널에서만 매출이 발생하고 있어요. 다른 채널(11번가, 카페24 등)로 확장하면 새로운 고객층을 확보할 수 있어요.` });
       } else if (topPct >= 50) {
-        items.push({ icon: '①', text: `<b>${top.channel}</b>이 전체 매출의 <b>${topPct}%</b>를 차지해요. 이 채널에 프로모션·재고를 우선 배정하는 게 효율적이에요. 다만 특정 채널 의존도가 높은 편이라, 정책 변경 리스크에 대비해 2위 채널(${channelBreakdown[1].channel})도 함께 키워두는 걸 추천해요.` });
+        items.push({ icon: '①', text: `<b>${topChName}</b>이 전체 매출의 <b>${topPct}%</b>를 차지해요. 이 채널에 프로모션·재고를 우선 배정하는 게 효율적이에요. 다만 특정 채널 의존도가 높은 편이라, 정책 변경 리스크에 대비해 2위 채널(${esc(channelsSorted[1].channel)})도 함께 키워두는 걸 추천해요.` });
       } else {
-        items.push({ icon: '①', text: `<b>${top.channel}</b>이 매출 1위(${topPct}%)지만 채널별 비중이 고르게 분산돼 있어요. 여러 채널을 균형있게 운영하는 지금 전략이 리스크 분산 측면에서 좋아요.` });
+        items.push({ icon: '①', text: `<b>${topChName}</b>이 매출 1위(${topPct}%)지만 채널별 비중이 고르게 분산돼 있어요. 여러 채널을 균형있게 운영하는 지금 전략이 리스크 분산 측면에서 좋아요.` });
       }
     }
 
@@ -320,16 +297,18 @@
         '오후(12-18시)': '점심시간 이후 오후 구매가 많아요. 점심시간대(12~1시) 타겟 광고가 효과적일 수 있어요.',
         '저녁(18-24시)': '퇴근 후 저녁 시간대 구매가 활발해요. 저녁 7~9시 사이 SNS 광고·알림 발송을 집중하면 좋아요.'
       };
-      items.push({ icon: '②', text: `주문의 <b>${peakPct}%</b>가 <b>${peak.label}</b>에 몰려있어요. ${timeAdvice[peak.label] || ''}` });
+      items.push({ icon: '②', text: `주문의 <b>${peakPct}%</b>가 <b>${esc(peak.label)}</b>에 몰려있어요. ${timeAdvice[peak.label] || ''}` });
     }
 
-    // 3. 인기상품 기반 제안
-    if (topProducts.length) {
-      const top = topProducts[0];
-      if (topProducts.length >= 3) {
-        items.push({ icon: '③', text: `<b>${top.name}</b>이 매출 1위예요. TOP3 상품을 묶은 세트/번들 구성을 만들면 객단가를 올릴 수 있어요.` });
+    // 3. 인기상품 기반 제안 (topProducts도 amount 기준으로 방어적 정렬 후 1위를 사용)
+    const productsSorted = topProducts.slice().sort((a, b) => b.amount - a.amount);
+    if (productsSorted.length) {
+      const top = productsSorted[0];
+      const topName = esc(top.name);
+      if (productsSorted.length >= 3) {
+        items.push({ icon: '③', text: `<b>${topName}</b>이 매출 1위예요. TOP3 상품을 묶은 세트/번들 구성을 만들면 객단가를 올릴 수 있어요.` });
       } else {
-        items.push({ icon: '③', text: `<b>${top.name}</b>이 매출 1위예요. 이 상품 위주로 리뷰 이벤트나 상세페이지 개선을 진행하면 전환율을 더 끌어올릴 수 있어요.` });
+        items.push({ icon: '③', text: `<b>${topName}</b>이 매출 1위예요. 이 상품 위주로 리뷰 이벤트나 상세페이지 개선을 진행하면 전환율을 더 끌어올릴 수 있어요.` });
       }
     }
 

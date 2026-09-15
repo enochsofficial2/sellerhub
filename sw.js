@@ -1,5 +1,7 @@
-const CACHE_NAME = 'sellerhub-v27';
-const CORE_ASSETS = ['./index.html', './orders.html', './inventory.html', './profile.html', './insights.html', './print.html', './style.css', './common.js', './manifest.json'];
+// 캐시 버전을 올려서, 이번에 바뀐 파일들(로그인 게이트/XSS 이스케이핑 등)을
+// 오프라인 캐시에 남아있던 예전 버전이 아니라 새 버전으로 다시 받아가게 합니다.
+const CACHE_NAME = 'sellerhub-v28';
+const CORE_ASSETS = ['./index.html', './orders.html', './inventory.html', './profile.html', './insights.html', './print.html', './settlement.html', './returns.html', './style.css', './common.js', './manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
