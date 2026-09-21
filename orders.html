@@ -115,7 +115,7 @@
   .table-group-header-row td{background:var(--bg); font-size:13px; font-weight:700; color:var(--ink-mute); padding:10px 14px;}
   .delivery-check-btn{background:none; border:1px solid var(--line); color:var(--ink-mute); font-size:12px;
     font-weight:600; padding:4px 9px; border-radius:6px; cursor:pointer; font-family:inherit;}
-  .delivery-check-btn:hover{border-color:var(--navy); color:var(--navy);}
+  .delivery-check-btn:hover{border-color:var(--ink); color:var(--ink);}
 
   .table-bulk-bar{display:none; align-items:center; justify-content:space-between; background:var(--navy); color:#fff;
     padding:10px 14px; font-size:12.5px; font-weight:600;}
@@ -137,7 +137,7 @@
   }
 
   .copyable{cursor:pointer; border-bottom:1px dashed var(--ink-mute);}
-  .copyable:hover{color:var(--navy); border-bottom-color:var(--navy);}
+  .copyable:hover{color:var(--ink); border-bottom-color:var(--ink);}
 
   /* ===== 인쇄 미리보기 모달 (새창 대신 페이지 안에서 바로 뜸) ===== */
   .print-modal-overlay{position:fixed; inset:0; background:rgba(10,15,25,0.75); z-index:200; display:none; align-items:center; justify-content:center;}
@@ -221,7 +221,7 @@
     <div class="bulk-print-bar" id="bulkSendBar" style="display:none;">
       <div class="bulk-print-bar-text">송장출력완료 <b id="bulkSendCount">0</b>건 - 채널로 한번에 전송</div>
       <div style="display:flex; gap:8px;">
-        <button class="bulk-print-btn" id="tableBulkPrintBtn" style="background:var(--surface); color:var(--navy);">
+        <button class="bulk-print-btn" id="tableBulkPrintBtn" style="background:var(--surface); color:var(--ink); border:1.5px solid var(--line);">
           선택 항목 재출력<span id="tableBulkCount"></span>
         </button>
         <button class="bulk-print-btn" id="bulkSendBtn">일괄 전송</button>
@@ -1000,7 +1000,7 @@
       <div class="detail-row"><span>연락처</span><span>${esc(o['구매자연락처'])||'-'}</span></div>
       <div class="detail-row"><span>배송지</span><span>${esc(o['구매자주소'])||'-'}</span></div>
       <div class="detail-row"><span>수량 / 금액</span><span>${formatWon(o['수량'])}개 · ${formatWon(o['판매가'])}원</span></div>
-      ${productLinkUrl ? `<div class="detail-row"><span>상품페이지</span><span><a href="${productLinkUrl}" target="_blank" rel="noopener" style="color:var(--navy); text-decoration:underline;">바로가기 →</a></span></div>` : ''}
+      ${productLinkUrl ? `<div class="detail-row"><span>상품페이지</span><span><a href="${productLinkUrl}" target="_blank" rel="noopener" style="color:var(--amber); text-decoration:underline;">바로가기 →</a></span></div>` : ''}
       ${itemsHtml}
       <div class="detail-row"><span>현재 상태</span><span>${esc(o['주문상태'])||'신규'}</span></div>
       ${o['채널전송상태'] ? `<div class="detail-row"><span>채널 전송</span><span style="color:${o['채널전송상태']==='실패' ? 'var(--danger)' : 'inherit'}">${esc(o['채널전송상태'])}</span></div>` : ''}

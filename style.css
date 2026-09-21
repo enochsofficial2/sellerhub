@@ -79,6 +79,7 @@ nav.bottom{position:fixed; bottom:0; left:0; right:0; background:var(--surface);
 .nav-item{display:flex; flex-direction:column; align-items:center; gap:4px; font-size:12.5px; color:var(--ink-mute);
   background:none; border:0; font-family:inherit; padding:6px 12px; text-decoration:none; cursor:pointer;}
 .nav-item.active{color:var(--navy); font-weight:700;}
+[data-theme="dark"] .nav-item.active{color:#EAF2FF; background:rgba(255,255,255,0.08);}
 .nav-item.disabled{opacity:0.4;}
 .nav-icon{width:23px; height:23px;}
 
@@ -150,6 +151,7 @@ nav.bottom{position:fixed; bottom:0; left:0; right:0; background:var(--surface);
   .bottom-inner{flex-direction:column; align-items:stretch; gap:6px; max-width:none; margin:0;}
   .nav-item{flex-direction:row; justify-content:flex-start; gap:12px; padding:13px 14px; border-radius:10px; font-size:13.5px;}
   .nav-item.active{background:var(--bg);}
+  [data-theme="dark"] .nav-item.active{background:rgba(255,255,255,0.08);}
   .nav-icon{width:19px; height:19px;}
 
   .refresh-btn{right:32px !important;}
