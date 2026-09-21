@@ -408,6 +408,7 @@
   <div class="field"><label>구매자명</label><input type="text" id="oBuyerName" placeholder="선택사항"></div>
   <div class="field"><label>연락처</label><input type="text" id="oBuyerPhone" placeholder="선택사항"></div>
   <div class="field"><label>주소</label><input type="text" id="oBuyerAddress" placeholder="선택사항"></div>
+  <div class="field"><label>우편번호</label><input type="text" id="oBuyerZip" placeholder="선택사항 (CJ 송장 발급에 필요해요)"></div>
   <div class="btn-row">
     <button class="btn btn-ghost" id="addOrderCancel">취소</button>
     <button class="btn btn-primary" id="addOrderSubmit">등록</button>
@@ -1413,12 +1414,13 @@
         buyerName: document.getElementById('oBuyerName').value.trim(),
         buyerPhone: document.getElementById('oBuyerPhone').value.trim(),
         buyerAddress: document.getElementById('oBuyerAddress').value.trim(),
+        buyerZip: document.getElementById('oBuyerZip').value.trim(),
         shippingType: currentShippingType || '일반'
       });
       if (res.error) throw new Error(res.error);
       showToast('주문이 등록됐어요' + (matched ? '' : ' (재고 연동 없이 이름만 기록됐어요)'));
       closeSheet('addOrderOverlay', 'addOrderSheet');
-      ['oProduct', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress'].forEach(id => document.getElementById(id).value = '');
+      ['oProduct', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oBuyerZip'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('oQty').value = 1;
       loadOrders(currentStatus);
     } catch (e) {
