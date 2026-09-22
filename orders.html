@@ -409,6 +409,7 @@
   <div class="field"><label>구매자명</label><input type="text" id="oBuyerName" placeholder="선택사항"></div>
   <div class="field"><label>연락처</label><input type="text" id="oBuyerPhone" placeholder="선택사항"></div>
   <div class="field"><label>주소</label><div style="display:flex; gap:6px;"><input type="text" id="oBuyerAddress" placeholder="선택사항" style="flex:1;"><button type="button" class="btn btn-ghost" id="oBuyerAddressSearchBtn" style="white-space:nowrap;">주소검색</button></div></div>
+  <div class="field"><label>상세주소</label><input type="text" id="oBuyerAddressDetail" placeholder="동/호수 등 (선택사항)"></div>
   <div class="field"><label>우편번호</label><input type="text" id="oBuyerZip" placeholder="주소검색으로 자동 입력돼요" readonly></div>
   <div class="btn-row">
     <button class="btn btn-ghost" id="addOrderCancel">취소</button>
@@ -475,6 +476,11 @@
 
 <script src="common.js"></script>
 <script>
+  function fullAddr_(o) {
+    const a = (o['구매자주소'] || '').trim();
+    const d = (o['구매자주소상세'] || '').trim();
+    return d ? (a + ' ' + d) : a;
+  }
   let currentStatus = '신규';
   let currentShippingType = null;
   let currentOrders = [];
@@ -571,7 +577,7 @@
       <td>${esc(o['상품명']) || '-'}</td>
       <td class="${o['구매자명'] ? 'copyable' : ''}" ${o['구매자명'] ? `data-copy="${esc(o['구매자명'])}"` : ''}>${esc(o['구매자명']) || '-'}</td>
       <td class="mono ${o['구매자연락처'] ? 'copyable' : ''}" ${o['구매자연락처'] ? `data-copy="${esc(o['구매자연락처'])}"` : ''}>${esc(o['구매자연락처']) || '-'}</td>
-      <td class="${o['구매자주소'] ? 'copyable' : ''}" ${o['구매자주소'] ? `data-copy="${esc(o['구매자주소'])}"` : ''} style="max-width:220px;">${esc(o['구매자주소']) || '-'}</td>
+      <td class="${fullAddr_(o) ? 'copyable' : ''}" ${fullAddr_(o) ? `data-copy="${esc(fullAddr_(o))}"` : ''} style="max-width:220px;">${esc(fullAddr_(o)) || '-'}</td>
       <td>${formatWon(o['수량'])}개</td>
       <td class="col-amount">${formatWon(o['판매가'])}원</td>
       <td>${esc(dateStr)}</td>
@@ -671,7 +677,7 @@
       '상품명': o['상품명'] || '',
       '수취인': o['구매자명'] || '',
       '연락처': o['구매자연락처'] || '',
-      '주소': o['구매자주소'] || '',
+      '주소': fullAddr_(o) || '',
       '수량': o['수량'] || 0,
       '금액': o['판매가'] || 0,
       '주문일시': o['주문일시'] || '',
@@ -1000,7 +1006,7 @@
     document.getElementById('detailBody').innerHTML = `
       <div class="detail-row"><span>구매자</span><span>${esc(o['구매자명'])||'-'}</span></div>
       <div class="detail-row"><span>연락처</span><span>${esc(o['구매자연락처'])||'-'}</span></div>
-      <div class="detail-row"><span>배송지</span><span>${esc(o['구매자주소'])||'-'}</span></div>
+      <div class="detail-row"><span>배송지</span><span>${esc(fullAddr_(o))||'-'}</span></div>
       <div class="detail-row"><span>수량 / 금액</span><span>${formatWon(o['수량'])}개 · ${formatWon(o['판매가'])}원</span></div>
       ${productLinkUrl ? `<div class="detail-row"><span>상품페이지</span><span><a href="${productLinkUrl}" target="_blank" rel="noopener" style="color:var(--amber); text-decoration:underline;">바로가기 →</a></span></div>` : ''}
       ${itemsHtml}
@@ -1446,13 +1452,14 @@
         buyerName: document.getElementById('oBuyerName').value.trim(),
         buyerPhone: document.getElementById('oBuyerPhone').value.trim(),
         buyerAddress: document.getElementById('oBuyerAddress').value.trim(),
+        buyerAddressDetail: document.getElementById('oBuyerAddressDetail').value.trim(),
         buyerZip: document.getElementById('oBuyerZip').value.trim(),
         shippingType: currentShippingType || '일반'
       });
       if (res.error) throw new Error(res.error);
       showToast('주문이 등록됐어요' + (matched ? '' : ' (재고 연동 없이 이름만 기록됐어요)'));
       closeSheet('addOrderOverlay', 'addOrderSheet');
-      ['oProduct', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oBuyerZip'].forEach(id => document.getElementById(id).value = '');
+      ['oProduct', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oBuyerAddressDetail', 'oBuyerZip'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('oQty').value = 1;
       loadOrders(currentStatus);
     } catch (e) {
