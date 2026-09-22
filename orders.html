@@ -501,9 +501,9 @@
     try {
       const isUnsentFilter = status === '__unsent__';
       const isReturnFilter = status === '__return__';
-      const needsClientFilter = isUnsentFilter || isReturnFilter;
+      // 상태별로 서버를 따로 부르지 않고, 상태 필터 없이 한 번만 불러온 뒤
+      // 탭(카테고리) 전환은 클라이언트에서 필터링해서 처리 (탭 전환 속도 개선)
       const listParams = {};
-      if (status && !needsClientFilter) listParams.status = status;
       if (currentShippingType) listParams.shippingType = currentShippingType;
       const data = await api('listOrders', listParams);
       if (data.error) throw new Error(data.error);
@@ -511,7 +511,9 @@
         ? (data || []).filter(o => o['채널전송상태'] === '실패')
         : isReturnFilter
           ? (data || []).filter(o => o['주문상태'] === '반품접수' || o['주문상태'] === '반품완료')
-          : (data || []);
+          : status
+            ? (data || []).filter(o => o['주문상태'] === status)
+            : (data || []);
       currentPage = 1;
       selectedIds.clear();
 
@@ -1285,6 +1287,7 @@
   });
 
   loadOrders(currentStatus);
+  loadChannelListForCollect(); // 미리 불러와서 주문수집 패널을 열 때 바로 보이게 함
 
   // 주문 수집 카드
   document.getElementById('collectHeader').addEventListener('click', () => {
