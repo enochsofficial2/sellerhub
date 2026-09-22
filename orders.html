@@ -493,8 +493,9 @@
   let currentPage = 1;
   let pageSize = 20;
   let selectedIds = new Set();
+  let __ordersCache = null; // 탭 전환 시 재사용할 마지막 주문 목록 캐시
 
-  async function loadOrders(status) {
+  async function loadOrders(status, forceRefresh) {
     const refreshBtn = document.getElementById('refreshBtn');
     refreshBtn.classList.add('spinning');
     const listEl = document.getElementById('orderList');
@@ -505,8 +506,17 @@
       // 탭(카테고리) 전환은 클라이언트에서 필터링해서 처리 (탭 전환 속도 개선)
       const listParams = {};
       if (currentShippingType) listParams.shippingType = currentShippingType;
-      const data = await api('listOrders', listParams);
-      if (data.error) throw new Error(data.error);
+      const cacheKey = currentShippingType || '__all__';
+      const CACHE_TTL_MS = 15000;
+      let data;
+      if (!forceRefresh && __ordersCache && __ordersCache.key === cacheKey && (Date.now() - __ordersCache.ts) < CACHE_TTL_MS) {
+        // 탭(카테고리) 전환만 하는 경우엔 방금 받아온 목록을 재사용해서 서버 왕복을 생략함
+        data = __ordersCache.data;
+      } else {
+        data = await api('listOrders', listParams);
+        if (data.error) throw new Error(data.error);
+        __ordersCache = { key: cacheKey, data: data, ts: Date.now() };
+      }
       currentOrders = isUnsentFilter
         ? (data || []).filter(o => o['채널전송상태'] === '실패')
         : isReturnFilter
@@ -690,7 +700,7 @@
       }
       selectedIds.clear();
       showToast(`${successCount}건 삭제 처리됐어요`);
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } finally {
       btn.disabled = false;
     }
@@ -835,7 +845,7 @@
       showToast(printIds.length + '건 출력됐어요');
       openPrintModal('orderIds=' + encodeURIComponent(printIds.join(',')));
       selectedIds.clear();
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } else {
       showToast('출력에 실패했어요');
     }
@@ -851,7 +861,7 @@
     loadOrders(currentStatus);
   });
 
-  document.getElementById('refreshBtn').addEventListener('click', () => loadOrders(currentStatus));
+  document.getElementById('refreshBtn').addEventListener('click', () => loadOrders(currentStatus, true));
 
   document.getElementById('bulkPrintBtn').addEventListener('click', async () => {
     const targets = currentOrders.filter(o => o['주문상태'] === '신규');
@@ -879,7 +889,7 @@
     if (!issuedIds.length) { showToast('발급에 실패했어요'); return; }
     showToast(issuedIds.length + '건 발급 완료' + (failCount ? ` (${failCount}건 실패)` : ''));
     openPrintModal('orderIds=' + encodeURIComponent(issuedIds.join(',')));
-    loadOrders(currentStatus);
+    loadOrders(currentStatus, true);
   });
 
   document.getElementById('bulkSendBtn').addEventListener('click', () => {
@@ -929,7 +939,7 @@
     btn.disabled = false;
     btn.textContent = '일괄 전송';
     showToast(successCount + '건 전송 완료' + (failCount ? ` (${failCount}건 실패)` : ''));
-    loadOrders(currentStatus);
+    loadOrders(currentStatus, true);
   });
 
   document.querySelectorAll('[data-soon]').forEach(el => {
@@ -1112,7 +1122,7 @@
         if (res.error) throw new Error(res.error);
         showToast(res.channelSync && res.channelSync.success ? '재전송 성공' : '재전송 실패: ' + (res.channelSync ? res.channelSync.error : ''));
         closeSheet('sheetOverlay', 'detailSheet');
-        loadOrders(currentStatus);
+        loadOrders(currentStatus, true);
       } catch (e) {
         showToast('처리 실패: ' + e.message);
       } finally {
@@ -1136,7 +1146,7 @@
         if (res.error) throw new Error(res.error);
         showToast('보류 처리했어요');
         closeSheet('sheetOverlay', 'detailSheet');
-        loadOrders(currentStatus);
+        loadOrders(currentStatus, true);
       } catch (e) {
         showToast('처리 실패: ' + e.message);
       } finally {
@@ -1152,7 +1162,7 @@
         if (res.error) throw new Error(res.error);
         showToast('보류 해제했어요 - 다시 신규 상태예요');
         closeSheet('sheetOverlay', 'detailSheet');
-        loadOrders(currentStatus);
+        loadOrders(currentStatus, true);
       } catch (e) {
         showToast('처리 실패: ' + e.message);
       } finally {
@@ -1168,7 +1178,7 @@
         if (res.error) throw new Error(res.error);
         showToast('반품완료 처리됐어요 - 재고가 복원됐어요');
         closeSheet('sheetOverlay', 'detailSheet');
-        loadOrders(currentStatus);
+        loadOrders(currentStatus, true);
       } catch (e) {
         showToast('처리 실패: ' + e.message);
       } finally {
@@ -1207,7 +1217,7 @@
         : ('임시 송장번호 발급: ' + res.trackingNo + ' (CJ API 연동 전)'));
       closeSheet('shipOverlay', 'shipSheet');
       openPrintModal('orderId=' + encodeURIComponent(activeOrderId));
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } catch (e) {
       showToast('처리 실패: ' + e.message);
     } finally {
@@ -1232,7 +1242,7 @@
         showToast('발송완료 처리됨 - 재고가 차감됐어요');
       }
       closeSheet('sendOverlay', 'sendSheet');
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } catch (e) {
       showToast('처리 실패: ' + e.message);
     } finally {
@@ -1255,7 +1265,7 @@
       showToast('반품 접수 완료');
       closeSheet('returnOverlay', 'returnSheet');
       document.getElementById('returnReason').value = '';
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } catch (e) {
       showToast('처리 실패: ' + e.message);
     } finally {
@@ -1278,7 +1288,7 @@
       showToast('취소 처리됐어요');
       closeSheet('cancelOverlay', 'cancelSheet');
       document.getElementById('cancelReason').value = '';
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } catch (e) {
       showToast('처리 실패: ' + e.message);
     } finally {
@@ -1286,7 +1296,7 @@
     }
   });
 
-  loadOrders(currentStatus);
+  loadOrders(currentStatus, true);
   loadChannelListForCollect(); // 미리 불러와서 주문수집 패널을 열 때 바로 보이게 함
 
   // 주문 수집 카드
@@ -1374,7 +1384,7 @@
       resultEl.innerHTML = `✅ ${successCount}건 추가됨` + (failCount ? ` · ⚠️ ${failCount}건 실패(상품명 누락 등)` : '');
       showToast(successCount + '건 주문이 추가됐어요');
       fileInput.value = '';
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } catch (e) {
       resultEl.innerHTML = '엑셀 읽기 실패: ' + esc(e.message);
     } finally {
@@ -1404,7 +1414,7 @@
 
       const totalCollected = results.reduce((sum, r) => sum + (r.count || 0), 0);
       showToast(totalCollected > 0 ? `총 ${totalCollected}건 수집됐어요` : '새로 수집된 주문이 없어요');
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } catch (e) {
       resultEl.innerHTML = '<div>수집 실패: ' + esc(e.message) + '</div>';
     } finally {
@@ -1491,7 +1501,7 @@
       closeSheet('addOrderOverlay', 'addOrderSheet');
       ['oProduct', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oBuyerAddressDetail', 'oBuyerZip'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('oQty').value = 1;
-      loadOrders(currentStatus);
+      loadOrders(currentStatus, true);
     } catch (e) {
       showToast('등록 실패: ' + e.message);
     } finally {
