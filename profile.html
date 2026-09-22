@@ -110,6 +110,7 @@
   <div class="field"><label>보내는사람(상호/이름)</label><input type="text" id="storeName" placeholder="예: 셀러허브 스토어"></div>
   <div class="field"><label>연락처</label><input type="text" id="storePhone" placeholder="예: 010-1234-5678"></div>
   <div class="field"><label>주소</label><div style="display:flex; gap:6px;"><input type="text" id="storeAddress" placeholder="출고지 주소" style="flex:1;"><button type="button" class="btn btn-ghost" id="storeAddressSearchBtn" style="white-space:nowrap;">주소검색</button></div></div>
+  <div class="field"><label>상세주소</label><input type="text" id="storeAddressDetail" placeholder="동/호수 등 (선택사항)"></div>
   <div class="field"><label>우편번호</label><input type="text" id="storeZip" placeholder="주소검색으로 자동 입력돼요" readonly></div>
   <div class="field"><label>사업자등록번호</label><input type="text" id="storeBusinessNumber" placeholder="예: 557-87-02709"></div>
   <div class="btn-row">
@@ -130,11 +131,12 @@
       if (info.error) return;
       document.getElementById('viewStoreName').textContent = info.name || '미설정';
       document.getElementById('viewStorePhone').textContent = info.phone || '-';
-      document.getElementById('viewStoreAddress').textContent = info.address || '-';
+      document.getElementById('viewStoreAddress').textContent = [info.address, info.addressDetail].filter(Boolean).join(' ') || '-';
       document.getElementById('viewStoreBusinessNumber').textContent = info.businessNumber || '-';
       document.getElementById('storeName').value = info.name || '';
       document.getElementById('storePhone').value = info.phone || '';
       document.getElementById('storeAddress').value = info.address || '';
+      document.getElementById('storeAddressDetail').value = info.addressDetail || '';
       document.getElementById('storeZip').value = info.zipCode || '';
       document.getElementById('storeBusinessNumber').value = info.businessNumber || '';
     } catch (e) {}
@@ -152,6 +154,7 @@
         name: document.getElementById('storeName').value.trim(),
         phone: document.getElementById('storePhone').value.trim(),
         address: document.getElementById('storeAddress').value.trim(),
+        addressDetail: document.getElementById('storeAddressDetail').value.trim(),
         zipCode: document.getElementById('storeZip').value.trim(),
         businessNumber: document.getElementById('storeBusinessNumber').value.trim()
       });
