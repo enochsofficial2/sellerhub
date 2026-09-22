@@ -477,8 +477,8 @@
 <script src="common.js"></script>
 <script>
   function fullAddr_(o) {
-    const a = (o['구매자주소'] || '').trim();
-    const d = (o['구매자주소상세'] || '').trim();
+    const a = String(o['구매자주소'] || '').trim();
+    const d = String(o['구매자주소상세'] || '').trim();
     return d ? (a + ' ' + d) : a;
   }
   let currentStatus = '신규';
