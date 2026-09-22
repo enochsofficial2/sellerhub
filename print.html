@@ -303,12 +303,41 @@
     try {
       const store = await api('getStoreInfo', {});
       const settled = await Promise.allSettled(orderIds.map(id => api('getOrderDetail', { orderId: id })));
-      const validOrders = settled
+      let validOrders = settled
         .filter(r => r.status === 'fulfilled' && r.value && !r.value.error)
         .map(r => r.value);
       const failedCount = orderIds.length - validOrders.length;
 
       if (!validOrders.length) throw new Error('출력할 주문 정보를 찾을 수 없어요');
+
+      // 합포장(같은 송장번호로 묶인 여러 주문)은 라벨 한 장으로 합쳐서 출력
+      const groups = new Map();
+      validOrders.forEach(o => {
+        const key = String(o['송장_송장번호'] || ('__' + o['주문ID']));
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(o);
+      });
+
+      let mergedNote = '';
+      validOrders = Array.from(groups.values()).map(group => {
+        if (group.length === 1) return group[0];
+        const items = [];
+        group.forEach(o => {
+          if (o['품목목록JSON']) {
+            try {
+              const parsed = JSON.parse(o['품목목록JSON']);
+              if (Array.isArray(parsed) && parsed.length) { items.push(...parsed); return; }
+            } catch (e) {}
+          }
+          items.push({ productName: o['상품명'] || '', quantity: o['수량'] || 1 });
+        });
+        const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+        mergedNote += `<div class="batch-note">합포장: ${group.map(o => o['주문ID']).join(', ')} → 송장 1건으로 합쳐짐</div>`;
+        return Object.assign({}, group[0], {
+          '수량': totalQty,
+          '품목목록JSON': JSON.stringify(items)
+        });
+      });
 
       // 상품명 기준 정렬 (같은 상품끼리 모아서 포장하기 편하게)
       validOrders.sort((a, b) => String(a['상품명'] || '').localeCompare(String(b['상품명'] || ''), 'ko'));
@@ -318,6 +347,7 @@
       if (validOrders.length > 1) {
         batchNote = `<div class="batch-note">총 ${validOrders.length}건 · 상품명순 정렬됨</div>`;
       }
+      batchNote += mergedNote;
       if (failedCount > 0) {
         batchNote += `<div class="batch-note" style="color:#D64545; font-weight:700;">⚠ ${failedCount}건은 정보를 불러오지 못해 라벨에서 빠졌어요. 새로고침 후 다시 시도해주세요.</div>`;
       }
