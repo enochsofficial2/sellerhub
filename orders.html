@@ -206,7 +206,7 @@
         <div style="border-top:1px dashed var(--line); margin-top:16px; padding-top:16px;">
           <div style="font-size:13px; font-weight:700; margin-bottom:4px;">또는 엑셀로 주문 추가</div>
           <div style="font-size:12px; color:var(--ink-mute); margin-bottom:10px;">
-            컬럼명: 쇼핑몰, 상품명, 수취인, 연락처, 주소, 수량 (엑셀 첫 줄에 이 이름 그대로 있어야 해요)
+            컬럼명: 쇼핑몰, 상품명, 옵션명, 수취인, 연락처, 주소, 수량 (옵션명은 선택사항이에요. 엑셀 첫 줄에 이 이름 그대로 있어야 해요)
           </div>
           <input type="file" id="excelUploadInput" accept=".xlsx,.xls,.csv" style="width:100%; font-size:13px; margin-bottom:10px;">
           <button class="collect-run-btn" id="excelUploadBtn">엑셀 업로드해서 주문 추가</button>
@@ -215,6 +215,9 @@
       </div>
     </div>
 
+    <div class="search-row" style="margin:0 0 12px;">
+      <input type="text" id="orderSearchInput" placeholder="상품명, 옵션명, 수취인, 연락처로 검색" style="width:100%; padding:10px 14px; border:1.5px solid var(--line); border-radius:8px; font-size:14px; background:var(--surface); color:var(--ink);">
+    </div>
     <div class="bulk-print-bar" id="bulkPrintBar" style="display:none;">
       <div class="bulk-print-bar-text">신규 주문 <b id="bulkPrintCount">0</b>건 - 상품명순으로 한번에 출력</div>
       <button class="bulk-print-btn" id="bulkPrintBtn">전체 출력</button>
@@ -409,6 +412,7 @@
     <input type="text" id="oProduct" list="orderProductList" placeholder="상품명 입력 (재고에 있는 상품이면 자동 연동돼요)">
     <datalist id="orderProductList"></datalist>
   </div>
+  <div class="field"><label>옵션명</label><input type="text" id="oOptionName" placeholder="예: 블랙 / L (선택사항)"></div>
   <div class="field"><label>수량 *</label><input type="number" id="oQty" value="1" min="1"></div>
   <div class="field"><label>구매자명</label><input type="text" id="oBuyerName" placeholder="선택사항"></div>
   <div class="field"><label>연락처</label><input type="text" id="oBuyerPhone" placeholder="선택사항"></div>
@@ -524,6 +528,20 @@
           : status
             ? (data || []).filter(o => o['주문상태'] === status)
             : (data || []);
+      
+
+      const searchTerm = (document.getElementById('orderSearchInput')?.value || '').trim().toLowerCase();
+      if (searchTerm) {
+        currentOrders = currentOrders.filter(o =>
+          String(o['상품명']||'').toLowerCase().includes(searchTerm) ||
+          String(o['옵션명']||'').toLowerCase().includes(searchTerm) ||
+          String(o['구매자명']||'').toLowerCase().includes(searchTerm) ||
+          String(o['구매자연락처']||'').toLowerCase().includes(searchTerm) ||
+          String(o['구매자주소']||'').toLowerCase().includes(searchTerm) ||
+          String(o['주문ID']||'').toLowerCase().includes(searchTerm) ||
+          String(o['송장_송장번호']||'').toLowerCase().includes(searchTerm)
+        );
+      }
       currentPage = 1;
       selectedIds.clear();
 
@@ -567,7 +585,7 @@
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">송장미전송</span>' : ''}
         <span class="order-date">${esc(dateStr)}</span>
       </div>
-      <div class="order-product">${esc(o['상품명']) || '-'}</div>
+      <div class="order-product">${esc(o['상품명']) || '-'}${o['옵션명'] ? ` <span style="color:var(--ink-mute); font-weight:400; font-size:13px;">(${esc(o['옵션명'])})</span>` : ''}</div>
       <div class="order-meta">
         <span>수량 <b>${formatWon(o['수량'])}개</b></span>
         <span>구매자 <b>${esc(o['구매자명']) || '-'}</b></span>
@@ -590,7 +608,7 @@
       <td>${esc(o['판매채널']) || '기타'} ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''}</td>
       <td><span class="${statusBadgeClass(o['주문상태'])}">${esc(o['주문상태']) || '신규'}</span>
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">미전송</span>' : ''}</td>
-      <td>${esc(o['상품명']) || '-'}</td>
+      <td>${esc(o['상품명']) || '-'}${o['옵션명'] ? `<div style="font-size:12px;color:var(--ink-mute);margin-top:2px;">옵션: ${esc(o['옵션명'])}</div>` : ''}</td>
       <td class="${o['구매자명'] ? 'copyable' : ''}" ${o['구매자명'] ? `data-copy="${esc(o['구매자명'])}"` : ''}>${esc(o['구매자명']) || '-'}</td>
       <td class="mono ${o['구매자연락처'] ? 'copyable' : ''}" ${o['구매자연락처'] ? `data-copy="${esc(o['구매자연락처'])}"` : ''}>${esc(o['구매자연락처']) || '-'}</td>
       <td class="${fullAddr_(o) ? 'copyable' : ''}" ${fullAddr_(o) ? `data-copy="${esc(fullAddr_(o))}"` : ''} style="max-width:220px;">${esc(fullAddr_(o)) || '-'}</td>
@@ -859,6 +877,13 @@
     btn.classList.add('active');
     currentStatus = btn.dataset.status;
     loadOrders(currentStatus);
+  });
+
+  // 검색
+  let __searchDebounce;
+  document.getElementById('orderSearchInput').addEventListener('input', () => {
+    clearTimeout(__searchDebounce);
+    __searchDebounce = setTimeout(() => loadOrders(currentStatus, false), 200);
   });
 
   document.getElementById('refreshBtn').addEventListener('click', () => loadOrders(currentStatus, true));
@@ -1369,6 +1394,7 @@
             channel: String(r['쇼핑몰'] || '').trim() || '직접판매',
             productId: matched ? matched['상품ID'] : '',
             productName: productName,
+            optionName: String(r['옵션명'] || '').trim(),
             quantity: quantity,
             buyerName: String(r['수취인'] || '').trim(),
             buyerPhone: String(r['연락처'] || '').trim(),
@@ -1474,6 +1500,7 @@
 
   document.getElementById('addOrderSubmit').addEventListener('click', async () => {
     const productName = document.getElementById('oProduct').value.trim();
+    const optionName = document.getElementById('oOptionName').value.trim();
     const qty = document.getElementById('oQty').value;
     if (!productName) { showToast('상품명을 입력해주세요'); return; }
     if (!qty || Number(qty) < 1) { showToast('수량을 확인해주세요'); return; }
@@ -1488,6 +1515,7 @@
         channel: document.getElementById('oChannel').value,
         productId: matched ? matched['상품ID'] : '',
         productName: productName,
+        optionName: optionName,
         quantity: qty,
         buyerName: document.getElementById('oBuyerName').value.trim(),
         buyerPhone: document.getElementById('oBuyerPhone').value.trim(),
@@ -1499,7 +1527,7 @@
       if (res.error) throw new Error(res.error);
       showToast('주문이 등록됐어요' + (matched ? '' : ' (재고 연동 없이 이름만 기록됐어요)'));
       closeSheet('addOrderOverlay', 'addOrderSheet');
-      ['oProduct', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oBuyerAddressDetail', 'oBuyerZip'].forEach(id => document.getElementById(id).value = '');
+      ['oProduct', 'oOptionName', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oBuyerAddressDetail', 'oBuyerZip'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('oQty').value = 1;
       loadOrders(currentStatus, true);
     } catch (e) {
