@@ -72,10 +72,18 @@
   .collect-title svg{color:var(--amber);}
   .collect-toggle-icon{color:var(--ink-mute); transition:transform .2s;}
   .collect-toggle-icon.open{transform:rotate(180deg);}
-  .collect-body{max-height:0; overflow:hidden; transition:max-height .25s ease;}
-  .collect-body.open{max-height:400px; margin-top:12px;}
-  .collect-channel-row{display:flex; align-items:center; gap:14px; padding:13px 4px; border-bottom:1px solid var(--bg); cursor:pointer;}
-  .collect-channel-row:last-child{border-bottom:0;}
+  .collect-body{max-height:0; overflow:hidden; transition:max-height .6s ease;}
+  .collect-body.open{max-height:1200px; margin-top:12px;}
+  .collect-layout{display:block;}
+  .collect-left{}
+  .collect-right{margin-top:14px;}
+  @media (min-width:900px){
+    .collect-layout{display:grid; grid-template-columns:1.3fr 1fr; gap:24px; align-items:start;}
+    .collect-right{margin-top:0; border-left:1px dashed var(--line); padding-left:24px;}
+  }
+  #collectChannelList{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px;}
+  .collect-channel-row{display:flex; align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--line); border-radius:10px; cursor:pointer;}
+  .collect-channel-row:last-child{border-bottom:1px solid var(--line);}
   .collect-channel-row input{width:24px; height:24px; flex-shrink:0; cursor:pointer; accent-color:var(--navy);}
   .collect-channel-name{flex:1; font-size:13px; font-weight:600;}
   .collect-channel-badge{font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px;}
@@ -113,6 +121,9 @@
   .order-table .col-check input, #selectAllCheck{width:20px; height:20px; cursor:pointer; accent-color:var(--navy);}
   .order-table .col-amount{text-align:right; font-weight:700; font-family:'IBM Plex Mono', monospace;}
   .order-table .quick-ship-btn{padding:7px 12px; font-size:12.5px;}
+  .order-table th.resizable-col{padding:0;}
+  .order-table th.resizable-col .th-resize-wrap{resize:horizontal; overflow:hidden; display:inline-block; min-width:48px; max-width:320px; width:76px; padding:13px 14px; box-sizing:border-box; vertical-align:middle; background:transparent;}
+  .order-table th.resizable-col .th-resize-wrap::-webkit-resizer{background:var(--ink-mute);}
   .table-group-header-row td{background:var(--bg); font-size:13px; font-weight:700; color:var(--ink-mute); padding:10px 14px;}
   .delivery-check-btn{background:none; border:1px solid var(--line); color:var(--ink-mute); font-size:12px;
     font-weight:600; padding:4px 9px; border-radius:6px; cursor:pointer; font-family:inherit;}
@@ -191,6 +202,7 @@
         <svg class="collect-toggle-icon" id="collectToggleIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
       </div>
       <div class="collect-body" id="collectBody">
+        <div class="collect-layout"><div class="collect-left">
         <div id="collectChannelList"><div class="skeleton" style="height:40px;"></div></div>
         <script>
           document.getElementById('collectChannelList').addEventListener('click', (e) => {
@@ -204,7 +216,7 @@
         <button class="collect-run-btn" id="collectRunBtn">선택한 사이트에서 수집하기</button>
         <div class="collect-result" id="collectResult"></div>
 
-        <div style="border-top:1px dashed var(--line); margin-top:16px; padding-top:16px;">
+        </div><div class="collect-right"><div style="border-top:1px dashed var(--line); margin-top:16px; padding-top:16px;">
           <div style="font-size:13px; font-weight:700; margin-bottom:4px;">또는 엑셀로 주문 추가</div>
           <div style="font-size:12px; color:var(--ink-mute); margin-bottom:10px;">
             컬럼명: 쇼핑몰, 상품명, 옵션명, 수취인, 연락처, 주소, 수량 (옵션명은 선택사항이에요. 엑셀 첫 줄에 이 이름 그대로 있어야 해요)
@@ -212,7 +224,7 @@
           <input type="file" id="excelUploadInput" accept=".xlsx,.xls,.csv" style="width:100%; font-size:13px; margin-bottom:10px;">
           <button class="collect-run-btn" id="excelUploadBtn">엑셀 업로드해서 주문 추가</button>
           <div class="collect-result" id="excelUploadResult"></div>
-        </div>
+        </div></div></div>
       </div>
     </div>
 
@@ -251,8 +263,8 @@
         <thead>
           <tr>
             <th class="col-check"><input type="checkbox" id="selectAllCheck"></th>
-            <th>쇼핑몰</th>
-            <th>상태</th>
+            <th class="resizable-col"><div class="th-resize-wrap">쇼핑몰</div></th>
+            <th class="resizable-col"><div class="th-resize-wrap">상태</div></th>
             <th>상품명</th>
             <th>옵션명</th>
             <th>수취인</th>
@@ -414,7 +426,7 @@
     <input type="text" id="oProduct" list="orderProductList" placeholder="상품명 입력 (재고에 있는 상품이면 자동 연동돼요)">
     <datalist id="orderProductList"></datalist>
   </div>
-  <div class="field"><label>옵션명</label><input type="text" id="oOptionName" placeholder="예: 블랙 / L (선택사항)"></div>
+  <div class="field"><label>옵션명</label><input type="text" id="oOptionName" placeholder="예: 블랙 / L (선택사항)"></div><div class="field"><label>박스타입</label><select id="oBoxType"><option value="01">01</option><option value="02" selected>02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option></select></div>
   <div class="field"><label>수량 *</label><input type="number" id="oQty" value="1" min="1"></div>
   <div class="field"><label>구매자명</label><input type="text" id="oBuyerName" placeholder="선택사항"></div>
   <div class="field"><label>연락처</label><input type="text" id="oBuyerPhone" placeholder="선택사항"></div>
@@ -508,11 +520,12 @@
     try {
       const isUnsentFilter = status === '__unsent__';
       const isReturnFilter = status === '__return__';
+      const searchTerm = (document.getElementById('orderSearchInput')?.value || '').trim().toLowerCase();
       // 상태별로 서버를 따로 부르지 않고, 상태 필터 없이 한 번만 불러온 뒤
       // 탭(카테고리) 전환은 클라이언트에서 필터링해서 처리 (탭 전환 속도 개선)
       const listParams = {};
-      if (currentShippingType) listParams.shippingType = currentShippingType;
-      const cacheKey = currentShippingType || '__all__';
+      if (currentShippingType && !searchTerm) listParams.shippingType = currentShippingType;
+      const cacheKey = (currentShippingType && !searchTerm) ? currentShippingType : '__all__';
       const CACHE_TTL_MS = 15000;
       let data;
       if (!forceRefresh && __ordersCache && __ordersCache.key === cacheKey && (Date.now() - __ordersCache.ts) < CACHE_TTL_MS) {
@@ -532,7 +545,6 @@
             : (data || []);
       
 
-      const searchTerm = (document.getElementById('orderSearchInput')?.value || '').trim().toLowerCase();
       if (searchTerm) {
         currentOrders = currentOrders.filter(o =>
           String(o['상품명']||'').toLowerCase().includes(searchTerm) ||
@@ -1044,6 +1056,14 @@
       document.getElementById('navFreshOrder').classList.add('active');
       document.querySelector('h1.page-title').textContent = '신선주문';
       document.title = '신선주문 - 셀러허브';
+    } else {
+      currentShippingType = null;
+      const navG = document.getElementById('navGeneralOrder');
+      const navF = document.getElementById('navFreshOrder');
+      if (navG) navG.classList.add('active');
+      if (navF) navF.classList.add('active');
+      document.querySelector('h1.page-title').textContent = '전체주문 (일반+신선)';
+      document.title = '전체주문 - 셀러허브';
     }
   })();
 
@@ -1505,6 +1525,7 @@
   document.getElementById('addOrderSubmit').addEventListener('click', async () => {
     const productName = document.getElementById('oProduct').value.trim();
     const optionName = document.getElementById('oOptionName').value.trim();
+    const boxType = document.getElementById('oBoxType').value;
     const qty = document.getElementById('oQty').value;
     if (!productName) { showToast('상품명을 입력해주세요'); return; }
     if (!qty || Number(qty) < 1) { showToast('수량을 확인해주세요'); return; }
@@ -1520,6 +1541,7 @@
         productId: matched ? matched['상품ID'] : '',
         productName: productName,
         optionName: optionName,
+        boxType: boxType,
         quantity: qty,
         buyerName: document.getElementById('oBuyerName').value.trim(),
         buyerPhone: document.getElementById('oBuyerPhone').value.trim(),
@@ -1532,6 +1554,7 @@
       showToast('주문이 등록됐어요' + (matched ? '' : ' (재고 연동 없이 이름만 기록됐어요)'));
       closeSheet('addOrderOverlay', 'addOrderSheet');
       ['oProduct', 'oOptionName', 'oBuyerName', 'oBuyerPhone', 'oBuyerAddress', 'oBuyerAddressDetail', 'oBuyerZip'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('oBoxType').value = '02';
       document.getElementById('oQty').value = 1;
       loadOrders(currentStatus, true);
     } catch (e) {
