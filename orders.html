@@ -25,6 +25,7 @@
   .order-top{display:flex; align-items:center; gap:6px; margin-bottom:8px;}
   .order-date{font-size:11px; color:var(--ink-mute); margin-left:auto;}
   .order-product{font-size:15px; font-weight:700; margin-bottom:4px;}
+  .order-option{font-size:13px; color:var(--ink-mute); margin-bottom:6px;}
   .order-meta{font-size:12px; color:var(--ink-mute); display:flex; gap:10px; flex-wrap:wrap;}
   .order-meta b{color:var(--ink); font-weight:600;}
   .order-bottom{display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
@@ -253,6 +254,7 @@
             <th>쇼핑몰</th>
             <th>상태</th>
             <th>상품명</th>
+            <th>옵션명</th>
             <th>수취인</th>
             <th>연락처</th>
             <th>주소</th>
@@ -585,7 +587,8 @@
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">송장미전송</span>' : ''}
         <span class="order-date">${esc(dateStr)}</span>
       </div>
-      <div class="order-product">${esc(o['상품명']) || '-'}${o['옵션명'] ? ` <span style="color:var(--ink-mute); font-weight:400; font-size:13px;">(${esc(o['옵션명'])})</span>` : ''}</div>
+      <div class="order-product">${esc(o['상품명']) || '-'}</div>
+      ${o['옵션명'] ? `<div class="order-option">옵션: ${esc(o['옵션명'])}</div>` : ''}
       <div class="order-meta">
         <span>수량 <b>${formatWon(o['수량'])}개</b></span>
         <span>구매자 <b>${esc(o['구매자명']) || '-'}</b></span>
@@ -608,7 +611,8 @@
       <td>${esc(o['판매채널']) || '기타'} ${o['배송타입'] === '신선' ? '<span class="badge fresh">신선</span>' : ''}</td>
       <td><span class="${statusBadgeClass(o['주문상태'])}">${esc(o['주문상태']) || '신규'}</span>
         ${o['채널전송상태'] === '실패' ? '<span class="badge status-return">미전송</span>' : ''}</td>
-      <td>${esc(o['상품명']) || '-'}${o['옵션명'] ? `<div style="font-size:12px;color:var(--ink-mute);margin-top:2px;">옵션: ${esc(o['옵션명'])}</div>` : ''}</td>
+      <td>${esc(o['상품명']) || '-'}</td>
+      <td>${esc(o['옵션명']) || '-'}</td>
       <td class="${o['구매자명'] ? 'copyable' : ''}" ${o['구매자명'] ? `data-copy="${esc(o['구매자명'])}"` : ''}>${esc(o['구매자명']) || '-'}</td>
       <td class="mono ${o['구매자연락처'] ? 'copyable' : ''}" ${o['구매자연락처'] ? `data-copy="${esc(o['구매자연락처'])}"` : ''}>${esc(o['구매자연락처']) || '-'}</td>
       <td class="${fullAddr_(o) ? 'copyable' : ''}" ${fullAddr_(o) ? `data-copy="${esc(fullAddr_(o))}"` : ''} style="max-width:220px;">${esc(fullAddr_(o)) || '-'}</td>
@@ -654,7 +658,7 @@
         <b>주문이 없어요</b>${currentStatus ? '이 상태의 주문이 아직 없어요' : '채널 연동이 완료되면 여기 자동으로 쌓여요'}
       </div>`;
       listEl.innerHTML = emptyHtml;
-      tableBody.innerHTML = `<tr><td colspan="13" style="padding:30px; text-align:center; color:var(--ink-mute);">주문이 없어요</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="14" style="padding:30px; text-align:center; color:var(--ink-mute);">주문이 없어요</td></tr>`;
       updatePaginationUI();
       updateTableBulkBar();
       return;
@@ -689,7 +693,7 @@
         groups[ch].push(o);
       });
       tableBody.innerHTML = Object.keys(groups).sort().map(ch => {
-        const headerRow = `<tr class="table-group-header-row"><td colspan="13">
+        const headerRow = `<tr class="table-group-header-row"><td colspan="14">
           <span class="${channelBadgeClass(ch)}">${esc(ch)}</span> ${groups[ch].length}건
         </td></tr>`;
         return headerRow + groups[ch].map(orderTableRowHtml).join('');
