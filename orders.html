@@ -720,21 +720,21 @@
   document.getElementById('bulkDeleteBtn').addEventListener('click', async () => {
     if (!selectedIds.size) { showToast('삭제할 주문을 먼저 선택해주세요'); return; }
     const ids = Array.from(selectedIds);
-    const reason = prompt(`선택한 ${ids.length}건을 삭제(취소) 처리해요. 사유를 입력해주세요 (취소를 누르면 중단돼요)`, '일괄 삭제');
-    if (reason === null) return;
+    const ok = confirm(`선택한 ${ids.length}건을 시트에서 완전히 삭제해요. 되돌릴 수 없어요 (삭제기록 시트에 백업은 남아요). 진행할까요?`);
+    if (!ok) return;
     const btn = document.getElementById('bulkDeleteBtn');
     btn.disabled = true;
     try {
-      let successCount = 0;
-      for (const id of ids) {
-        try {
-          const res = await api('cancelOrder', { orderId: id, reason: reason || '일괄 삭제' });
-          if (!res.error) successCount++;
-        } catch (e) {}
+      const res = await api('deleteOrdersPermanently', { orderIds: ids });
+      if (res.error) {
+        showToast('삭제 실패: ' + res.error);
+      } else {
+        selectedIds.clear();
+        showToast(`${res.deletedCount || 0}건 삭제됐어요`);
+        loadOrders(currentStatus, true);
       }
-      selectedIds.clear();
-      showToast(`${successCount}건 삭제 처리됐어요`);
-      loadOrders(currentStatus, true);
+    } catch (e) {
+      showToast('삭제 실패: ' + e.message);
     } finally {
       btn.disabled = false;
     }
