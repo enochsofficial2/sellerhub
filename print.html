@@ -34,58 +34,74 @@
     font-size:9pt; display:flex; flex-direction:column; overflow:hidden; padding:2mm 3mm;}
 
   /* 항목1~4: 운송장번호 / 접수일자 / 출력매수 / 재출력여부 */
-  .l-head{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1.5px solid #AFCBE8; padding-bottom:1.2mm; flex-shrink:0; gap:2mm;}
+  .l-head{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1.5px solid #AFCBE8; padding-bottom:0.5mm; flex-shrink:0; gap:2mm;}
   .l-head .no-label{color:#3E7FC1; font-size:8pt; font-weight:700; margin-right:1.5mm; vertical-align:top;}
   .l-head .no-value{font-weight:900; font-size:12pt; letter-spacing:0.3px;}
   .l-head .date{color:#333; font-size:8pt; font-weight:700;}
   .l-head .page{color:#888; font-size:8pt;}
   .l-head .reprint{color:#B34700; font-size:8pt; font-weight:700;}
 
-  /* 항목5(분류코드바코드) / 항목6(분류코드 텍스트) / 항목19(특수문자1) / 항목8 상단(운송장번호바코드) */
-  .l-zonebar{display:flex; align-items:center; gap:2mm; padding:1mm 0; flex-shrink:0; min-height:16mm; overflow:hidden;}
+  /* 항목5(분류코드바코드) / 항목6(분류코드 텍스트, 가이드 표 크기 36+53+36pt 그대로 적용) / 항목19(특수문자1, 30pt) */
+  .l-zonebar{display:flex; align-items:center; gap:2mm; padding:0.3mm 0; flex-shrink:0; min-height:19mm; overflow:hidden;}
   .l-zonebar .zc-barcode{height:9mm; flex-shrink:0;}
-  .l-zone-code{display:flex; align-items:baseline; line-height:1; white-space:nowrap; overflow:hidden; font-weight:900;}
-  .l-zone-code .zc-major{font-size:22pt;}
-  .l-zone-code .zc-dash{font-size:22pt; margin:0 0.5mm;}
-  .l-zone-code .zc-sub1{font-size:30pt;}
-  .l-zone-code .zc-sub2{font-size:22pt;}
-  .l-zone-code .zc-special{font-size:17pt; margin-left:2mm;}
-  .l-zonebar .top-tracking-barcode{height:9mm; margin-left:auto; flex-shrink:0;}
+  .l-zone-code{display:flex; align-items:baseline; line-height:0.85; white-space:nowrap; overflow:hidden; font-weight:900; margin-left:auto;}
+  .l-zone-code .zc-major{font-size:36pt;}
+  .l-zone-code .zc-dash{font-size:36pt; margin:0 0.5mm;}
+  .l-zone-code .zc-sub1{font-size:53pt;}
+  .l-zone-code .zc-sub2{font-size:36pt;}
+  .l-zone-code .zc-special{font-size:30pt; margin-left:2mm;}
+
+  /* 항목7(받는분성명/전화번호) 줄 우측에 항목8(운송장번호바코드) 상단 인스턴스를 배치 (가이드 샘플 이미지 기준) */
+  .l-to-nameline-row{display:flex; justify-content:space-between; align-items:center; gap:2mm; margin-top:0.3mm;}
+  .l-to-nameline-row .top-tracking-barcode{height:8mm; flex-shrink:0;}
 
   .l-block{display:flex; border-top:1px solid #ccc; flex-shrink:0;}
   .l-tag{writing-mode:vertical-rl; text-orientation:upright; font-size:9px; font-weight:700;
     background:#DCEBFA; color:#1B5FAE; border-radius:1mm; flex:0 0 5mm; width:5mm;
     margin-right:2mm; text-align:center; padding:1.5mm 0;}
 
-  /* 항목7(받는분성명/전화번호) / 항목9(받는분주소) / 항목10(주소약칭) */
-  .l-to{padding:1.5mm 0;}
+  /* 항목7(받는분성명/전화번호) / 항목9(받는분주소, 9pt) / 항목10(주소약칭, 24pt, CJ 주소정제 API의 CLSFADDR값) */
+  .l-to{padding:0.6mm 0;}
   .l-to-main{flex:1; min-width:0;}
-  .l-to-detail{font-size:24pt; font-weight:900; line-height:1.15;}
-  .l-to-nameline{font-size:10pt; color:#222; margin-top:1mm; font-weight:700;}
-  .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.8mm; line-height:1.3; font-weight:500;}
+  .l-to-nameline{font-size:10pt; color:#222; font-weight:700;}
+  .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.3mm; line-height:1.15; font-weight:500;}
+  .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95; margin-top:0.3mm;}
 
   /* 항목11(보내는분성명/전화번호) / 항목12~14(운임그룹조정+수량/운임/운임구분) / 항목15(보내는분주소) */
-  .l-from{padding:1.5mm 0;}
+  .l-from{padding:0.6mm 0;}
   .l-from-main{flex:1; min-width:0;}
   .l-from-top{display:flex; justify-content:space-between; align-items:center;}
   .l-from-name{font-weight:900; font-size:7pt;}
   .l-from-chips{display:flex; gap:4mm; align-items:center; font-size:10pt;}
   .l-from-chips .chip-label{color:#3E7FC1; font-weight:700; margin-right:0.8mm;}
-  .l-from-addr{font-size:8pt; color:#333; margin-top:0.8mm; font-weight:500;}
-  .l-from-bottom{display:flex; justify-content:space-between; align-items:baseline; margin-top:0.8mm;}
+  .l-from-addr{font-size:8pt; color:#333; margin-top:0.3mm; font-weight:500;}
+  .l-from-bottom{display:flex; justify-content:space-between; align-items:baseline; margin-top:0.3mm;}
   .l-from-phone{font-size:7pt; color:#222; font-weight:700;}
   .l-from-recv-repeat{font-size:7pt; color:#777; font-weight:500;}
 
   /* 항목16(상품명) */
-  .l-product{font-size:9pt; color:#111; font-weight:700; padding:1.5mm 0; border-top:1px dashed #ccc; flex-shrink:0;}
+  .l-product{font-size:9pt; color:#111; font-weight:700; padding:0.6mm 0; line-height:1.2; border-top:1px dashed #ccc; flex-shrink:0;}
+
+  /* CJ 표준운송장 가이드 샘플 이미지에 고정으로 포함된 안내문구/인증 영역
+     (번호가 매겨진 가변 항목이 아니라, 모든 라벨에 동일하게 들어가는 고정 문구/배지입니다.
+     실제 GRP/ONE 로고 이미지 파일은 없어서 배지 형태로 근사 구현했어요 — 정확한 로고 아트웍이 필요하면 교체 필요) */
+  .l-compliance{display:flex; align-items:center; gap:1.5mm; padding:0.4mm 0; border-top:1px dashed #ccc; flex-shrink:0;}
+  .l-compliance-badge{flex-shrink:0; width:7mm; height:7mm; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:4.5pt; font-weight:900; line-height:1.05; text-align:center; color:#fff;}
+  .l-compliance-badge.grp{background:#3C9A5F;}
+  .l-compliance-badge.one{background:#1B5FAE;}
+  .l-compliance-text{flex:1; min-width:0; font-size:6.5pt; color:#555; font-weight:500; line-height:1.15;}
+  .l-compliance-tagline{flex-shrink:0; font-size:6.5pt; color:#1B5FAE; font-weight:700; text-align:center; line-height:1.2; width:16mm;}
+
+  /* 항목17(배송메세지) */
+  .l-delivery-msg{font-size:8pt; color:#555; font-weight:500; padding:0.3mm 0; line-height:1.15; flex-shrink:0;}
 
   .l-spacer{flex:1 1 auto;}
 
-  /* 항목17(배송메세지) / 항목18(배달점소-별칭) / 항목8 하단(운송장번호바코드) */
-  .l-footer{display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px solid #000; padding-top:1.5mm; flex-shrink:0;}
+  /* 항목18(배달점소-별칭) / 항목8 하단(운송장번호바코드) */
+  .l-footer{display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px solid #000; padding-top:0.6mm; flex-shrink:0;}
   .l-footer-left{flex:1; min-width:0;}
-  .l-footer-msg{font-size:8pt; color:#555; margin-top:0.5mm; font-weight:500;}
-  .l-footer-zone{font-size:18pt; font-weight:900; margin-top:0.5mm;}
+  .l-footer-zone{font-size:18pt; font-weight:900;}
   .l-footer-mid{text-align:right; margin-right:3mm; flex-shrink:0;}
   .l-footer-qty{font-size:10pt; font-weight:700;}
   .l-footer-page{font-size:8pt; color:#888;}
@@ -197,14 +213,14 @@
       majorCode: order['송장_대분류코드'] || '',
       subCode: order['송장_서브코드'] || '',
       zoneName: order['송장_배송구역'] || '',
-      inZoneCode: order['송장_권내배송코드'] || ''
+      inZoneCode: order['송장_권내배송코드'] || '',
+      addrAbbrev: order['송장_주소약칭'] || ''  // 항목10: CJ 주소정제 API의 CLSFADDR값 (백엔드 연동 전 주문은 빈값)
     };
   }
 
-  // 항목6(분류코드 텍스트) + 항목19(특수문자1/권내배송코드)를 CJ 표준운송장 가이드의
-  // 글자별 크기 차등(대분류 22pt + 서브코드 첫 글자 30pt + 나머지 22pt + 특수문자 17pt)에 맞춰 렌더링.
-  // ※ 서브코드를 "첫 글자만 확대"하는 규칙은 가이드 샘플 이미지("4W44-4g")를 근거로 한 해석이라,
-  //    실제 CJ 시스템 출력물과 다르면 목성찬님 확인 후 조정이 필요해요.
+  // 항목6(분류코드 텍스트) + 항목19(특수문자1/권내배송코드)를 CJ 표준운송장 가이드 표에 적힌
+  // 글자크기 그대로 렌더링 (대분류 36pt + 서브코드 첫 글자 53pt + 나머지 36pt + 특수문자 30pt).
+  // 서브코드 첫 글자만 확대하는 규칙은 가이드에 실제로 포함된 샘플 이미지("4W44-4g")를 보고 그대로 반영한 거예요.
   function renderZoneCodeHtml(zone) {
     const major = esc(zone.majorCode) || '';
     const sub = String(zone.subCode || '');
@@ -260,15 +276,17 @@
         <div class="l-zonebar">
           <svg class="zc-barcode" id="${barcodeIdMajor}"></svg>
           <div class="l-zone-code">${renderZoneCodeHtml(zone)}</div>
-          <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
         </div>
 
         <div class="l-block l-to">
           <div class="l-tag">받는분</div>
           <div class="l-to-main">
-            <div class="l-to-detail">${esc(toDetail) || esc(toBase) || '-'}</div>
-            <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
+            <div class="l-to-nameline-row">
+              <span class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</span>
+              <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
+            </div>
             <div class="l-to-fulladdr">${esc(order['구매자주소']) || '-'}</div>
+            <div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div>
           </div>
         </div>
 
@@ -293,11 +311,18 @@
 
         <div class="l-product">${productLine}</div>
 
+        <div class="l-compliance">
+          <div class="l-compliance-badge grp">GRP<br>친환경</div>
+          <div class="l-compliance-text">고객님(받는 분)의 소중한 상품을 안전하게 배송하겠습니다.<br>개인정보 유출우려가 있으니 운송장은 폐기바랍니다.</div>
+          <div class="l-compliance-badge one">ONE</div>
+        </div>
+
+        <div class="l-delivery-msg">${esc(order['배송메세지']) || '배송메세지 없음'}</div>
+
         <div class="l-spacer"></div>
 
         <div class="l-footer">
           <div class="l-footer-left">
-            <div class="l-footer-msg">${esc(order['배송메세지']) || '문앞'}</div>
             <div class="l-footer-zone">${esc(zone.zoneName) || '-'}</div>
           </div>
           <div class="l-footer-mid">
