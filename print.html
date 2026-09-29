@@ -31,7 +31,7 @@
   .label-page{width:123mm; height:100mm; margin:0 auto 14px; display:flex; flex-direction:column; overflow:hidden;}
   .label{width:123mm; flex:1; min-height:0; background:#fff; border:1.5px solid var(--line);
     font-family:'Noto Sans KR', 'Pretendard', sans-serif; font-weight:700;
-    font-size:9pt; display:flex; flex-direction:column; overflow:hidden; padding:2mm 3mm;}
+    font-size:9pt; display:flex; flex-direction:column; overflow:hidden; padding:1mm 3mm;}
 
   /* 항목1~4: 운송장번호 / 접수일자 / 출력매수 / 재출력여부 */
   .l-head{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1.5px solid #AFCBE8; padding-bottom:0.5mm; flex-shrink:0; gap:2mm;}
@@ -89,15 +89,20 @@
   .l-from-phone{font-size:7pt; color:#222; font-weight:700;}
   .l-from-recv-repeat{font-size:7pt; color:#777; font-weight:500;}
 
-  /* 항목16(상품명) */
-  .l-product{font-size:9pt; color:#111; font-weight:700; padding:0.6mm 0; line-height:1.2; border-top:1px dashed #ccc; flex-shrink:0;}
+  /* 항목16(상품명) — 상품이 여러 개라 텍스트가 길어져도 하단 footer(바코드/구역명 등)를
+     절대 밀어내거나 겹치지 않도록, 최대 2줄까지만 표시하고 그 이상은 말줄임(...) 처리.
+     (라벨 공간이 고정(100mm)이라 무제한으로 늘어나면 footer가 잘리거나 겹칠 수 있어서
+     '잘리는 것'보다 '보기 좋게 줄이는 것'을 선택함) */
+  .l-product{font-size:9pt; color:#111; font-weight:700; padding:0.6mm 0; line-height:1.2; border-top:1px dashed #ccc; flex-shrink:0;
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; max-height:calc(1.2em * 2 + 1.2mm);}
 
   /* 실물 CJ 송장 용지에 GRP/ONE 준수사항 문구(고객님의 소중한 상품을.../개인정보 유출우려...)가
      이미 인쇄돼있는 것을 실물 인쇄로 확인함(2026.09.29) → 중복 출력 제거. 필요시를 대비해 클래스는
      남겨두되(.l-compliance) 실제 HTML에서는 더 이상 사용하지 않음. */
 
-  /* 항목17(배송메세지) */
-  .l-delivery-msg{font-size:8pt; color:#555; font-weight:500; padding:0.3mm 0; line-height:1.15; flex-shrink:0;}
+  /* 항목17(배송메세지) — 상품명과 같은 이유로 1줄까지만 표시하고 넘으면 말줄임 처리 */
+  .l-delivery-msg{font-size:8pt; color:#555; font-weight:500; padding:0.3mm 0; line-height:1.15; flex-shrink:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
   .l-spacer{flex:1 1 auto;}
 
