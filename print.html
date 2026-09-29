@@ -72,7 +72,7 @@
   .l-to-main{flex:1; min-width:0;}
   .l-to-nameline{font-size:10pt; color:#222; font-weight:700;}
   .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.3mm; line-height:1.15; font-weight:500;}
-  .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95; margin-top:0.3mm;}
+  .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95;}
 
   /* 항목11(보내는분성명/전화번호) / 항목12~14(운임그룹조정+수량/운임/운임구분) / 항목15(보내는분주소) */
   .l-from{padding:0.6mm 0;}
@@ -280,12 +280,12 @@
 
         <div class="l-block l-to">
           <div class="l-to-main">
+            <div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div>
             <div class="l-to-nameline-row">
               <span class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</span>
               <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
             </div>
             <div class="l-to-fulladdr">${esc(order['구매자주소']) || '-'}</div>
-            <div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div>
           </div>
         </div>
 
