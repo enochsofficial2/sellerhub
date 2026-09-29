@@ -52,7 +52,7 @@
 
   <main>
     <div class="api-note" id="apiNote">
-      아직 택배사 API가 등록되지 않았어요. 지금 접수하면 임시 접수번호로 저장되고, 택배사 API키를 등록하면 그 다음부터는 자동으로 실제 접수·전송까지 처리돼요.
+      원송장번호를 입력하고 조회하면 해당 주문의 수취인 정보가 자동으로 채워져요. 확인 후 반품 접수를 누르면 택배사에 실제로 접수돼요.
     </div>
 
     <div class="form-card">
@@ -62,11 +62,21 @@
           <option value="CJ대한통운">CJ대한통운</option>
         </select>
       </div>
-      <div class="field"><label>수취인명(상대방)</label><input type="text" id="rpName" placeholder="반품 수거지 이름"></div>
-      <div class="field"><label>연락처</label><input type="text" id="rpPhone" placeholder="예: 010-1234-5678"></div>
-      <div class="field"><label>주소</label><input type="text" id="rpAddress" placeholder="반품 수거 주소"></div>
-      <div class="field"><label>반품 사유</label><textarea id="rpReason" placeholder="예: 단순 변심, 상품 불량 등 (선택)"></textarea></div>
-      <button class="btn btn-danger" id="rpSubmit" style="width:100%;">반품 접수</button>
+      <div class="field">
+        <label>원송장번호</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="rpTrackingNo" placeholder="발송했던 운송장번호" style="flex:1;">
+          <button class="btn" id="rpLookup" style="white-space:nowrap;">조회</button>
+        </div>
+      </div>
+      <div id="rpFound" style="display:none;">
+        <div class="field"><label>수취인명(상대방)</label><input type="text" id="rpName" readonly></div>
+        <div class="field"><label>연락처</label><input type="text" id="rpPhone" readonly></div>
+        <div class="field"><label>주소</label><input type="text" id="rpAddress" readonly></div>
+        <div class="field"><label>상품명</label><input type="text" id="rpProduct" readonly></div>
+        <div class="field"><label>반품 사유</label><textarea id="rpReason" placeholder="예: 단순 변심, 상품 불량 등 (선택)"></textarea></div>
+        <button class="btn btn-danger" id="rpSubmit" style="width:100%;">반품 접수</button>
+      </div>
     </div>
 
     <div class="section-title">접수 내역</div>
@@ -150,15 +160,19 @@
         // 상태값이 "접수완료(수동)"처럼 접두어만 같은 변형으로 저장돼도 "완료"로 잘못 안 뜨게 함
         const status = String(r['접수상태'] || '').trim();
         const isReal = status.startsWith('접수완료');
+        const isCancelled = status.indexOf('취소') !== -1;
+        const pickupId = r['수거ID'] || '';
         return '<div class="pickup-card">' +
           '<div class="pickup-top"><span class="badge">' + esc(r['택배사']) + '</span>' +
-          '<span class="badge ' + (isReal ? 'done' : 'pending') + '">' + esc(r['접수상태']) + '</span>' +
+          '<span class="badge ' + (isCancelled ? '' : (isReal ? 'done' : 'pending')) + '">' + esc(r['접수상태']) + '</span>' +
           '<span class="pickup-date">' + formatDate(r['접수일시']) + '</span></div>' +
           '<div class="pickup-name">' + esc(r['수취인명']) + '</div>' +
           '<div class="pickup-meta"><span><b>연락처</b> ' + esc(r['연락처']) + '</span></div>' +
           '<div class="pickup-meta"><span>' + esc(r['주소']) + '</span></div>' +
+          (r['원송장번호'] ? '<div class="pickup-meta"><span><b>원송장번호</b> ' + esc(r['원송장번호']) + '</span></div>' : '') +
           (r['픽업번호'] ? '<div class="pickup-meta"><span><b>접수번호</b> ' + esc(r['픽업번호']) + '</span></div>' : '') +
           (r['비고'] ? '<div class="pickup-msg">' + esc(r['비고']) + '</div>' : '') +
+          (!isCancelled && pickupId ? '<button class="btn" data-pickup-id="' + esc(pickupId) + '" style="width:100%; margin-top:10px;" onclick="cancelPickup(this)">신청취소</button>' : '') +
           '</div>';
       }).join('');
     } catch (e) {
@@ -167,29 +181,50 @@
   }
 
   let rpSubmitting = false; // 연타/이중 네트워크 요청 방지 (btn.disabled만으론 일부 모바일에서 두 번 눌리는 경우가 있음)
+  let rpLooking = false;
+
+  document.getElementById('rpLookup').addEventListener('click', async () => {
+    if (rpLooking) return;
+    const trackingNo = document.getElementById('rpTrackingNo').value.trim();
+    if (!trackingNo) {
+      showToast('원송장번호를 입력해주세요');
+      return;
+    }
+    const btn = document.getElementById('rpLookup');
+    rpLooking = true;
+    btn.disabled = true;
+    try {
+      const res = await api('lookupReturnOrderInfo', { trackingNo });
+      if (!res || !res.found) {
+        document.getElementById('rpFound').style.display = 'none';
+        showToast((res && res.message) || '해당 운송장번호로 발송된 주문을 찾을 수 없어요');
+        return;
+      }
+      document.getElementById('rpName').value = res.name || '';
+      document.getElementById('rpPhone').value = res.phone || '';
+      document.getElementById('rpAddress').value = res.address || '';
+      document.getElementById('rpProduct').value = res.productName || '';
+      document.getElementById('rpFound').style.display = 'block';
+    } catch (e) {
+      showToast('조회 실패: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      rpLooking = false;
+    }
+  });
 
   document.getElementById('rpSubmit').addEventListener('click', async () => {
     if (rpSubmitting) return;
 
-    const name = document.getElementById('rpName').value.trim();
-    const phone = document.getElementById('rpPhone').value.trim();
-    const address = document.getElementById('rpAddress').value.trim();
+    const originalTrackingNo = document.getElementById('rpTrackingNo').value.trim();
+    const name = document.getElementById('rpName').value;
+    const phone = document.getElementById('rpPhone').value;
+    const address = document.getElementById('rpAddress').value;
     const reason = document.getElementById('rpReason').value.trim();
     const courierName = document.getElementById('rpCourier').value;
 
-    if (!name || !phone || !address) {
-      showToast('수취인명, 연락처, 주소를 입력해주세요');
-      return;
-    }
-    // 최소한의 형식 검증 — 숫자/하이픈만 허용, 자릿수 대략 확인 (완전한 검증은 아니지만
-    // 명백한 오타(문자 섞임, 너무 짧은 번호)는 이 단계에서 걸러서 헛수거 접수를 줄임
-    const phoneDigits = phone.replace(/[^0-9]/g, '');
-    if (!/^[0-9-\s]+$/.test(phone) || phoneDigits.length < 9 || phoneDigits.length > 11) {
-      showToast('연락처 형식을 확인해주세요 (숫자만, 9~11자리)');
-      return;
-    }
-    if (address.length < 5) {
-      showToast('주소를 더 정확히 입력해주세요');
+    if (!originalTrackingNo || !name || !phone || !address) {
+      showToast('먼저 원송장번호를 조회해주세요');
       return;
     }
 
@@ -199,13 +234,12 @@
     rpSubmitting = true;
     btn.disabled = true;
     try {
-      const res = await api('createReturnPickup', { name, phone, address, reason, courierName });
+      const res = await api('createReturnPickup', { originalTrackingNo, reason, courierName });
       if (res.error) throw new Error(res.error);
       showToast(res.isReal ? '반품 접수가 완료됐어요' : '임시로 접수됐어요 (API 등록 전)');
-      document.getElementById('rpName').value = '';
-      document.getElementById('rpPhone').value = '';
-      document.getElementById('rpAddress').value = '';
+      document.getElementById('rpTrackingNo').value = '';
       document.getElementById('rpReason').value = '';
+      document.getElementById('rpFound').style.display = 'none';
       loadPickups();
     } catch (e) {
       showToast('접수 실패: ' + e.message);
@@ -214,6 +248,22 @@
       rpSubmitting = false;
     }
   });
+
+  async function cancelPickup(btn) {
+    const pickupId = btn.getAttribute('data-pickup-id');
+    if (!pickupId) return;
+    if (!confirm('이 반품 접수를 취소할까요?')) return;
+    btn.disabled = true;
+    try {
+      const res = await api('cancelReturnPickup', { pickupId });
+      if (res.error) throw new Error(res.error);
+      showToast('취소됐어요');
+      loadPickups();
+    } catch (e) {
+      showToast('취소 실패: ' + e.message);
+      btn.disabled = false;
+    }
+  }
 
   loadPickups();
 </script>
