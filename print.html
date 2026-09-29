@@ -85,7 +85,7 @@
   .l-from-chips{display:flex; gap:4mm; align-items:center; font-size:10pt;}
   .l-from-chips .chip-label{color:#3E7FC1; font-weight:700; margin-right:0.8mm;}
   .l-from-addr{font-size:8pt; color:#333; margin-top:0.3mm; font-weight:500;}
-  .l-from-bottom{display:flex; justify-content:space-between; align-items:baseline; margin-top:0.3mm;}
+  .l-from-bottom{display:flex; justify-content:flex-end; align-items:baseline; margin-top:0.3mm;}
   .l-from-phone{font-size:7pt; color:#222; font-weight:700;}
   .l-from-recv-repeat{font-size:7pt; color:#777; font-weight:500;}
 
@@ -295,7 +295,7 @@
         <div class="l-block l-from">
           <div class="l-from-main">
             <div class="l-from-top">
-              <span class="l-from-name">${store.name ? esc(store.name) : '(내정보에서 출고지 정보를 설정해주세요)'}</span>
+              <span class="l-from-name">${store.name ? esc(store.name) : '(내정보에서 출고지 정보를 설정해주세요)'}　${esc(store.phone) || '-'}</span>
               <span class="l-from-chips">
                 <span><span class="chip-label">수량</span>${formatWon(order['수량'])}</span>
                 <span><span class="chip-label">운임</span>0</span>
@@ -304,7 +304,6 @@
             </div>
             <div class="l-from-addr">${esc(store.address) || ''}${store.addressDetail ? ' ' + esc(store.addressDetail) : ''}</div>
             <div class="l-from-bottom">
-              <span class="l-from-phone">${esc(store.phone) || '-'}</span>
               <span class="l-from-recv-repeat">받는분: ${esc(maskedName)} / ${esc(maskedPhone)}</span>
             </div>
           </div>
