@@ -62,6 +62,9 @@
   /* 항목7(받는분성명/전화번호) 줄 우측에 항목8(운송장번호바코드) 상단 인스턴스를 배치 (가이드 샘플 이미지 기준) */
   .l-to-nameline-row{display:flex; justify-content:space-between; align-items:center; gap:2mm; margin-top:0.3mm;}
   .l-to-nameline-row .top-tracking-barcode{height:8mm; flex-shrink:0;}
+  /* 주소약칭(항목10) 글자수가 주문마다 달라서(예: "원천 627 테라타워" vs "두산위브 상가동 208호") 옆의
+     바코드와 폭을 나눠 쓰다 보면 줄바꿈이 생길 수 있음 → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리 */
+  .l-to-detail-clip{overflow:hidden; min-width:0; flex:1;}
 
   /* "받는분"/"보내는분" 캡션은 실물 CJ 송장 용지 왼쪽 끝에 파란색으로 이미 인쇄돼있어서(실물 인쇄 확인 완료)
      텍스트를 중복 출력하지 않음 — 단, 그 자리는 실물 용지 인쇄 위치와 겹치지 않도록 여백만 그대로 비워둠 */
@@ -72,7 +75,7 @@
   .l-to-main{flex:1; min-width:0;}
   .l-to-nameline{font-size:10pt; color:#222; font-weight:700;}
   .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.3mm; line-height:1.15; font-weight:500;}
-  .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95;}
+  .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95; white-space:nowrap; transform-origin:left center;}
 
   /* 항목11(보내는분성명/전화번호) / 항목12~14(운임그룹조정+수량/운임/운임구분) / 항목15(보내는분주소) */
   .l-from{padding:0.6mm 0;}
@@ -280,11 +283,11 @@
 
         <div class="l-block l-to">
           <div class="l-to-main">
-            <div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div>
             <div class="l-to-nameline-row">
-              <span class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</span>
+              <div class="l-to-detail-clip"><div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div></div>
               <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
             </div>
+            <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
             <div class="l-to-fulladdr">${esc(order['구매자주소']) || '-'}</div>
           </div>
         </div>
@@ -364,12 +367,14 @@
     });
   }
 
-  // 대분류/서브코드 자릿수가 지역에 따라 가이드 샘플보다 훨씬 길게 오는 경우(예: "300000-2k")
-  // 실물 인쇄에서 실제로 확인됨(2026.09.29) → 고정 36/53/36/30pt로는 폭을 넘어 잘림.
-  // 넘칠 때만 transform:scale로 전체 비율을 유지한 채 줄여서 절대 잘리지 않도록 함.
-  function fitZoneCode() {
-    document.querySelectorAll('.l-zone-code').forEach(outer => {
-      const inner = outer.querySelector('.l-zone-code-inner');
+  // 글자수가 주문마다 달라지는 항목(분류코드, 주소약칭 등)이 고정 폰트 크기로는 폭을 넘어
+  // 잘리거나(overflow:hidden) 줄바꿈되는 문제가 실물 인쇄에서 실제로 확인됨(2026.09.29).
+  // 넘칠 때만 transform:scale로 전체 비율을 유지한 채 줄여서 절대 잘리거나 줄바꿈되지 않도록 함.
+  // (outerSelector = 폭을 재는/자르는 바깥 래퍼, innerSelector = 그 안에서 실제로 축소될 안쪽 래퍼.
+  //  자르기와 축소를 같은 요소에 걸면 축소 전 크기 기준으로 이미 잘려버리는 문제가 있어 분리함)
+  function shrinkToFit(outerSelector, innerSelector) {
+    document.querySelectorAll(outerSelector).forEach(outer => {
+      const inner = outer.querySelector(innerSelector);
       if (!inner) return;
       inner.style.transform = 'none';
       const available = outer.clientWidth;
@@ -379,6 +384,10 @@
         inner.style.transform = 'scale(' + ratio.toFixed(3) + ')';
       }
     });
+  }
+  function fitZoneCode() {
+    shrinkToFit('.l-zone-code', '.l-zone-code-inner');
+    shrinkToFit('.l-to-detail-clip', '.l-to-detail');
   }
 
   async function render() {
