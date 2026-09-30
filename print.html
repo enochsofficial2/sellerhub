@@ -59,12 +59,15 @@
   .l-zone-code-inner .zc-sub2{font-size:36pt;}
   .l-zone-code-inner .zc-special{font-size:30pt; margin-left:2mm;}
 
-  /* 항목7(받는분성명/전화번호) 줄 우측에 항목8(운송장번호바코드) 상단 인스턴스를 배치 (가이드 샘플 이미지 기준) */
-  .l-to-nameline-row{display:flex; justify-content:space-between; align-items:center; gap:2mm; margin-top:0.3mm;}
+  /* 항목7(받는분성명/전화번호) 줄 우측에 항목8(운송장번호바코드) 상단 인스턴스를 배치 (가이드 샘플 이미지 기준).
+     ※ CJ 파트너 테스트 피드백(2026.09.30) 반영: 예전엔 이 줄에 주소약칭(항목10, 큰글씨)이 잘못 들어가 있었음 —
+     실제 가이드 샘플 라벨을 픽셀 단위로 다시 확인한 결과 순서는 7(성명/전화)→9(받는분주소, 작은글씨)→10(주소약칭, 큰글씨)
+     인데, 코드가 10→7→9 순으로 뒤바뀌어 있었음. 이게 "받는사람 주소 위치가 다르다"는 CJ 지적의 실제 원인. */
+  .l-to-nameline-row{display:flex; justify-content:space-between; align-items:center; gap:2mm;}
   .l-to-nameline-row .top-tracking-barcode{height:8mm; flex-shrink:0;}
-  /* 주소약칭(항목10) 글자수가 주문마다 달라서(예: "원천 627 테라타워" vs "두산위브 상가동 208호") 옆의
-     바코드와 폭을 나눠 쓰다 보면 줄바꿈이 생길 수 있음 → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리 */
-  .l-to-detail-clip{overflow:hidden; min-width:0; flex:1;}
+  /* 주소약칭(항목10) 글자수가 주문마다 달라서(예: "원천 627 테라타워" vs "두산위브 상가동 208호") 폭을 넘기 쉬움
+     → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리 */
+  .l-to-detail-clip{overflow:hidden; min-width:0; margin-top:0.3mm;}
 
   /* "받는분"/"보내는분" 캡션은 실물 CJ 송장 용지 왼쪽 끝에 파란색으로 이미 인쇄돼있어서(실물 인쇄 확인 완료)
      텍스트를 중복 출력하지 않음 — 단, 그 자리는 실물 용지 인쇄 위치와 겹치지 않도록 여백만 그대로 비워둠 */
@@ -292,11 +295,11 @@
         <div class="l-block l-to">
           <div class="l-to-main">
             <div class="l-to-nameline-row">
-              <div class="l-to-detail-clip"><div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div></div>
+              <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
               <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
             </div>
-            <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
             <div class="l-to-fulladdr">${esc(toFullAddr) || '-'}</div>
+            <div class="l-to-detail-clip"><div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div></div>
           </div>
         </div>
 
