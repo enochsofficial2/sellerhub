@@ -31,7 +31,7 @@
   .label-page{width:123mm; height:100mm; margin:0 auto 14px; display:flex; flex-direction:column; overflow:hidden;}
   .label{width:123mm; flex:1; min-height:0; background:#fff; border:1.5px solid var(--line);
     font-family:'Noto Sans KR', 'Pretendard', sans-serif; font-weight:700;
-    font-size:9pt; display:flex; flex-direction:column; overflow:hidden; padding:2mm 3mm;}
+    font-size:9pt; display:flex; flex-direction:column; overflow:hidden; padding:1mm 3mm;}
 
   /* 항목1~4: 운송장번호 / 접수일자 / 출력매수 / 재출력여부 */
   .l-head{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1.5px solid #AFCBE8; padding-bottom:0.5mm; flex-shrink:0; gap:2mm;}
@@ -41,31 +41,41 @@
   .l-head .page{color:#888; font-size:8pt;}
   .l-head .reprint{color:#B34700; font-size:8pt; font-weight:700;}
 
-  /* 항목5(분류코드바코드) / 항목6(분류코드 텍스트, 가이드 표 크기 36+53+36pt 그대로 적용) / 항목19(특수문자1, 30pt) */
-  .l-zonebar{display:flex; align-items:center; gap:2mm; padding:0.3mm 0; flex-shrink:0; min-height:19mm; overflow:hidden;}
+  /* 항목5(분류코드바코드) / 항목6(분류코드 텍스트, 가이드 표 크기 36+53+36pt 그대로 적용) / 항목19(특수문자1, 30pt)
+     지역에 따라 대분류/서브코드 자릿수가 가이드 샘플("4W44-4g")보다 훨씬 길게 오는 경우가 실제로 있어서
+     (예: 대분류 6자리+서브 2자리), 고정 pt 크기 그대로면 폭을 넘어 잘려버림. 그래서 폭이 넘칠 때만
+     JS(fitZoneCode)가 transform:scale로 전체를 비율 유지한 채 줄여서 절대 잘리지 않게 함. */
+  .l-zonebar{display:flex; align-items:flex-start; gap:2mm; padding:0.3mm 0; flex-shrink:0; min-height:19mm; overflow:hidden;}
   .l-zonebar .zc-barcode{height:9mm; flex-shrink:0;}
-  .l-zone-code{display:flex; align-items:baseline; line-height:0.85; white-space:nowrap; overflow:hidden; font-weight:900; margin-left:auto;}
-  .l-zone-code .zc-major{font-size:36pt;}
-  .l-zone-code .zc-dash{font-size:36pt; margin:0 0.5mm;}
-  .l-zone-code .zc-sub1{font-size:53pt;}
-  .l-zone-code .zc-sub2{font-size:36pt;}
-  .l-zone-code .zc-special{font-size:30pt; margin-left:2mm;}
+  /* overflow(자르기)와 transform:scale(축소)를 같은 요소에 같이 걸면 브라우저가 "자르기"를
+     축소 이전(레이아웃 단계) 크기 기준으로 먼저 적용해버려서, 정작 축소해도 잘린 채로 남는 문제가 있었음
+     (실제 테스트로 확인). 그래서 자르는 역할(overflow:hidden, 폭 계산)은 바깥 래퍼(.l-zone-code)가,
+     축소 역할(transform:scale)은 안쪽 래퍼(.l-zone-code-inner)가 나눠서 맡도록 분리함. */
+  .l-zone-code{display:flex; overflow:hidden; margin-left:auto; justify-content:flex-end;}
+  .l-zone-code-inner{display:flex; align-items:baseline; line-height:0.85; white-space:nowrap; font-weight:900; transform-origin:right center;}
+  .l-zone-code-inner .zc-major{font-size:36pt;}
+  .l-zone-code-inner .zc-dash{font-size:36pt; margin:0 0.5mm;}
+  .l-zone-code-inner .zc-sub1{font-size:53pt;}
+  .l-zone-code-inner .zc-sub2{font-size:36pt;}
+  .l-zone-code-inner .zc-special{font-size:30pt; margin-left:2mm;}
 
   /* 항목7(받는분성명/전화번호) 줄 우측에 항목8(운송장번호바코드) 상단 인스턴스를 배치 (가이드 샘플 이미지 기준) */
   .l-to-nameline-row{display:flex; justify-content:space-between; align-items:center; gap:2mm; margin-top:0.3mm;}
   .l-to-nameline-row .top-tracking-barcode{height:8mm; flex-shrink:0;}
+  /* 주소약칭(항목10) 글자수가 주문마다 달라서(예: "원천 627 테라타워" vs "두산위브 상가동 208호") 옆의
+     바코드와 폭을 나눠 쓰다 보면 줄바꿈이 생길 수 있음 → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리 */
+  .l-to-detail-clip{overflow:hidden; min-width:0; flex:1;}
 
-  .l-block{display:flex; border-top:1px solid #ccc; flex-shrink:0;}
-  .l-tag{writing-mode:vertical-rl; text-orientation:upright; font-size:9px; font-weight:700;
-    background:#DCEBFA; color:#1B5FAE; border-radius:1mm; flex:0 0 5mm; width:5mm;
-    margin-right:2mm; text-align:center; padding:1.5mm 0;}
+  /* "받는분"/"보내는분" 캡션은 실물 CJ 송장 용지 왼쪽 끝에 파란색으로 이미 인쇄돼있어서(실물 인쇄 확인 완료)
+     텍스트를 중복 출력하지 않음 — 단, 그 자리는 실물 용지 인쇄 위치와 겹치지 않도록 여백만 그대로 비워둠 */
+  .l-block{display:flex; border-top:1px solid #ccc; flex-shrink:0; padding-left:9mm;}
 
   /* 항목7(받는분성명/전화번호) / 항목9(받는분주소, 9pt) / 항목10(주소약칭, 24pt, CJ 주소정제 API의 CLSFADDR값) */
   .l-to{padding:0.6mm 0;}
   .l-to-main{flex:1; min-width:0;}
   .l-to-nameline{font-size:10pt; color:#222; font-weight:700;}
   .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.3mm; line-height:1.15; font-weight:500;}
-  .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95; margin-top:0.3mm;}
+  .l-to-detail{font-size:20pt; font-weight:900; line-height:0.95; white-space:nowrap; transform-origin:left center;}
 
   /* 항목11(보내는분성명/전화번호) / 항목12~14(운임그룹조정+수량/운임/운임구분) / 항목15(보내는분주소) */
   .l-from{padding:0.6mm 0;}
@@ -74,27 +84,25 @@
   .l-from-name{font-weight:900; font-size:7pt;}
   .l-from-chips{display:flex; gap:4mm; align-items:center; font-size:10pt;}
   .l-from-chips .chip-label{color:#3E7FC1; font-weight:700; margin-right:0.8mm;}
-  .l-from-addr{font-size:8pt; color:#333; margin-top:0.3mm; font-weight:500;}
-  .l-from-bottom{display:flex; justify-content:space-between; align-items:baseline; margin-top:0.3mm;}
+  .l-from-bottom{display:flex; justify-content:space-between; align-items:baseline; margin-top:0.3mm; gap:2mm;}
+  .l-from-addr{font-size:8pt; color:#333; font-weight:500; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .l-from-phone{font-size:7pt; color:#222; font-weight:700;}
-  .l-from-recv-repeat{font-size:7pt; color:#777; font-weight:500;}
+  .l-from-recv-repeat{font-size:7pt; color:#777; font-weight:500; flex-shrink:0; white-space:nowrap;}
 
-  /* 항목16(상품명) */
-  .l-product{font-size:9pt; color:#111; font-weight:700; padding:0.6mm 0; line-height:1.2; border-top:1px dashed #ccc; flex-shrink:0;}
+  /* 항목16(상품명) — 상품이 여러 개라 텍스트가 길어져도 하단 footer(바코드/구역명 등)를
+     절대 밀어내거나 겹치지 않도록, 최대 2줄까지만 표시하고 그 이상은 말줄임(...) 처리.
+     (라벨 공간이 고정(100mm)이라 무제한으로 늘어나면 footer가 잘리거나 겹칠 수 있어서
+     '잘리는 것'보다 '보기 좋게 줄이는 것'을 선택함) */
+  .l-product{font-size:9pt; color:#111; font-weight:700; padding:0.6mm 0; line-height:1.2; border-top:1px dashed #ccc; flex-shrink:0;
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; max-height:calc(1.2em * 2 + 1.2mm);}
 
-  /* CJ 표준운송장 가이드 샘플 이미지에 고정으로 포함된 안내문구/인증 영역
-     (번호가 매겨진 가변 항목이 아니라, 모든 라벨에 동일하게 들어가는 고정 문구/배지입니다.
-     실제 GRP/ONE 로고 이미지 파일은 없어서 배지 형태로 근사 구현했어요 — 정확한 로고 아트웍이 필요하면 교체 필요) */
-  .l-compliance{display:flex; align-items:center; gap:1.5mm; padding:0.4mm 0; border-top:1px dashed #ccc; flex-shrink:0;}
-  .l-compliance-badge{flex-shrink:0; width:7mm; height:7mm; border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-size:4.5pt; font-weight:900; line-height:1.05; text-align:center; color:#fff;}
-  .l-compliance-badge.grp{background:#3C9A5F;}
-  .l-compliance-badge.one{background:#1B5FAE;}
-  .l-compliance-text{flex:1; min-width:0; font-size:6.5pt; color:#555; font-weight:500; line-height:1.15;}
-  .l-compliance-tagline{flex-shrink:0; font-size:6.5pt; color:#1B5FAE; font-weight:700; text-align:center; line-height:1.2; width:16mm;}
+  /* 실물 CJ 송장 용지에 GRP/ONE 준수사항 문구(고객님의 소중한 상품을.../개인정보 유출우려...)가
+     이미 인쇄돼있는 것을 실물 인쇄로 확인함(2026.09.29) → 중복 출력 제거. 필요시를 대비해 클래스는
+     남겨두되(.l-compliance) 실제 HTML에서는 더 이상 사용하지 않음. */
 
-  /* 항목17(배송메세지) */
-  .l-delivery-msg{font-size:8pt; color:#555; font-weight:500; padding:0.3mm 0; line-height:1.15; flex-shrink:0;}
+  /* 항목17(배송메세지) — 상품명과 같은 이유로 1줄까지만 표시하고 넘으면 말줄임 처리 */
+  .l-delivery-msg{font-size:8pt; color:#555; font-weight:500; padding:0.3mm 0; line-height:1.15; flex-shrink:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 
   .l-spacer{flex:1 1 auto;}
 
@@ -267,7 +275,7 @@
       ${isTemp ? `<div class="temp-notice">⚠ 임시 송장번호(${isFreshTemp ? '신선배송' : '일반배송'}) - 실제 접수 시 택배사 번호로 교체돼요</div>` : ''}
       <div class="label">
         <div class="l-head">
-          <div><span class="no-label">운송장번호</span><span class="no-value">${esc(formatTrackingDisplay(trackingNo)) || '-'}</span></div>
+          <div><span class="no-label" style="visibility:hidden">운송장번호</span><span class="no-value">${esc(formatTrackingDisplay(trackingNo)) || '-'}</span></div>
           <div class="date">${esc(dateStr)}</div>
           <div class="page">1/1</div>
           <div class="reprint">-</div>
@@ -275,35 +283,32 @@
 
         <div class="l-zonebar">
           <svg class="zc-barcode" id="${barcodeIdMajor}"></svg>
-          <div class="l-zone-code">${renderZoneCodeHtml(zone)}</div>
+          <div class="l-zone-code"><div class="l-zone-code-inner">${renderZoneCodeHtml(zone)}</div></div>
         </div>
 
         <div class="l-block l-to">
-          <div class="l-tag">받는분</div>
           <div class="l-to-main">
             <div class="l-to-nameline-row">
-              <span class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</span>
+              <div class="l-to-detail-clip"><div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div></div>
               <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
             </div>
+            <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
             <div class="l-to-fulladdr">${esc(order['구매자주소']) || '-'}</div>
-            <div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div>
           </div>
         </div>
 
         <div class="l-block l-from">
-          <div class="l-tag">보내는분</div>
           <div class="l-from-main">
             <div class="l-from-top">
-              <span class="l-from-name">${store.name ? esc(store.name) : '(내정보에서 출고지 정보를 설정해주세요)'}</span>
+              <span class="l-from-name">${store.name ? esc(store.name) : '(내정보에서 출고지 정보를 설정해주세요)'}　${esc(store.phone) || '-'}</span>
               <span class="l-from-chips">
                 <span><span class="chip-label">수량</span>${formatWon(order['수량'])}</span>
                 <span><span class="chip-label">운임</span>0</span>
                 <span><span class="chip-label">결제</span>신용</span>
               </span>
             </div>
-            <div class="l-from-addr">${esc(store.address) || ''}${store.addressDetail ? ' ' + esc(store.addressDetail) : ''}</div>
             <div class="l-from-bottom">
-              <span class="l-from-phone">${esc(store.phone) || '-'}</span>
+              <span class="l-from-addr">${esc(store.address) || ''}${store.addressDetail ? ' ' + esc(store.addressDetail) : ''}</span>
               <span class="l-from-recv-repeat">받는분: ${esc(maskedName)} / ${esc(maskedPhone)}</span>
             </div>
           </div>
@@ -311,13 +316,7 @@
 
         <div class="l-product">${productLine}</div>
 
-        <div class="l-compliance">
-          <div class="l-compliance-badge grp">GRP<br>친환경</div>
-          <div class="l-compliance-text">고객님(받는 분)의 소중한 상품을 안전하게 배송하겠습니다.<br>개인정보 유출우려가 있으니 운송장은 폐기바랍니다.</div>
-          <div class="l-compliance-badge one">ONE</div>
-        </div>
-
-        <div class="l-delivery-msg">${esc(order['배송메세지']) || '배송메세지 없음'}</div>
+        <div class="l-delivery-msg">${esc(order['배송메세지']) || ''}</div>
 
         <div class="l-spacer"></div>
 
@@ -370,6 +369,29 @@
         }
       });
     });
+  }
+
+  // 글자수가 주문마다 달라지는 항목(분류코드, 주소약칭 등)이 고정 폰트 크기로는 폭을 넘어
+  // 잘리거나(overflow:hidden) 줄바꿈되는 문제가 실물 인쇄에서 실제로 확인됨(2026.09.29).
+  // 넘칠 때만 transform:scale로 전체 비율을 유지한 채 줄여서 절대 잘리거나 줄바꿈되지 않도록 함.
+  // (outerSelector = 폭을 재는/자르는 바깥 래퍼, innerSelector = 그 안에서 실제로 축소될 안쪽 래퍼.
+  //  자르기와 축소를 같은 요소에 걸면 축소 전 크기 기준으로 이미 잘려버리는 문제가 있어 분리함)
+  function shrinkToFit(outerSelector, innerSelector) {
+    document.querySelectorAll(outerSelector).forEach(outer => {
+      const inner = outer.querySelector(innerSelector);
+      if (!inner) return;
+      inner.style.transform = 'none';
+      const available = outer.clientWidth;
+      const needed = inner.scrollWidth;
+      if (available > 0 && needed > available) {
+        const ratio = available / needed;
+        inner.style.transform = 'scale(' + ratio.toFixed(3) + ')';
+      }
+    });
+  }
+  function fitZoneCode() {
+    shrinkToFit('.l-zone-code', '.l-zone-code-inner');
+    shrinkToFit('.l-to-detail-clip', '.l-to-detail');
   }
 
   async function render() {
@@ -435,6 +457,7 @@
       contentEl.innerHTML = batchNote + validOrders.map((o, i) => renderLabel(o, store, i)).join('');
 
       drawBarcodes(validOrders);
+      fitZoneCode();
     } catch (e) {
       contentEl.className = 'error-box';
       contentEl.innerHTML = '불러오기 실패: ' + esc(e.message);
