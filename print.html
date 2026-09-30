@@ -255,7 +255,10 @@
     const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, '');
     const trackingDigits = trackingNo.replace(/[^0-9]/g, '');
 
-    const { base: toBase, detail: toDetail } = splitAddressForLabel(order['구매자주소']);
+    // 항목9(받는분주소)는 가이드 기준 "받는분주소 + 주소2 + 상세주소"를 합쳐서 보여줘야 하는데,
+    // 상세주소(구매자주소상세, 예: 동/호수)가 빠져있던 버그를 수정 (CJ 파트너 테스트 피드백 반영, 2026.09.30)
+    const toFullAddr = [order['구매자주소'], order['구매자주소상세']].filter(Boolean).join(' ').trim();
+    const { base: toBase, detail: toDetail } = splitAddressForLabel(toFullAddr);
     const zone = getZoneInfo(order);
     const maskedName = maskName(order['구매자명']);
     const maskedPhone = maskPhone(order['구매자연락처']);
@@ -293,7 +296,7 @@
               <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
             </div>
             <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
-            <div class="l-to-fulladdr">${esc(order['구매자주소']) || '-'}</div>
+            <div class="l-to-fulladdr">${esc(toFullAddr) || '-'}</div>
           </div>
         </div>
 
