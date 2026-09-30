@@ -64,7 +64,9 @@
      실제 가이드 샘플 라벨을 픽셀 단위로 다시 확인한 결과 순서는 7(성명/전화)→9(받는분주소, 작은글씨)→10(주소약칭, 큰글씨)
      인데, 코드가 10→7→9 순으로 뒤바뀌어 있었음. 이게 "받는사람 주소 위치가 다르다"는 CJ 지적의 실제 원인. */
   .l-to-nameline-row{display:flex; justify-content:space-between; align-items:center; gap:2mm;}
-  .l-to-nameline-row .top-tracking-barcode{height:8mm; flex-shrink:0;}
+  /* 가이드 표 기준 운송장번호바코드(항목8)는 상단/하단 두 인스턴스 모두 9mm — 상단 것만 8mm로 잘못돼있던 걸
+     19개 항목 전수 재확인(2026.09.30) 중 발견해 9mm로 통일 */
+  .l-to-nameline-row .top-tracking-barcode{height:9mm; flex-shrink:0;}
   /* 주소약칭(항목10) 글자수가 주문마다 달라서(예: "원천 627 테라타워" vs "두산위브 상가동 208호") 폭을 넘기 쉬움
      → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리 */
   .l-to-detail-clip{overflow:hidden; min-width:0; margin-top:0.3mm;}
@@ -78,7 +80,8 @@
   .l-to-main{flex:1; min-width:0;}
   .l-to-nameline{font-size:10pt; color:#222; font-weight:700;}
   .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.3mm; line-height:1.15; font-weight:500;}
-  .l-to-detail{font-size:20pt; font-weight:900; line-height:0.95; white-space:nowrap; transform-origin:left center;}
+  /* 가이드 표 기준 주소약칭(항목10)은 24pt — 19개 항목 전수 재확인(2026.09.30) 중 20pt로 돼있던 걸 발견해 수정 */
+  .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95; white-space:nowrap; transform-origin:left center;}
 
   /* 항목11(보내는분성명/전화번호) / 항목12~14(운임그룹조정+수량/운임/운임구분) / 항목15(보내는분주소) */
   .l-from{padding:0.6mm 0;}
