@@ -86,7 +86,8 @@ function statusBadgeClass(status) {
 // ============================================
 function api(action, params, opts) {
   opts = opts || {};
-  const timeoutMs = opts.timeoutMs || 20000;
+  // 목록/조회 요청은 시트 데이터가 많으면 20초를 넘기는 경우가 있어서 타임아웃을 넉넉하게 늘림
+  const timeoutMs = opts.timeoutMs || 45000;
 
   return _authReadyPromise.then(function () {
     if (!_idToken) {
