@@ -101,16 +101,23 @@
      7(성명/전화, 바코드가 같은 줄 우측에 붙음) → 9(받는분주소, 작은글씨, 2줄) → 10(주소약칭, 큰글씨)
      순서로 나와있음. 어제(10.01) 사진 두 장만 보고 "10+바코드 → 7 → 9"로 뒤집었던 게 가이드와 어긋나서
      원복함 — 사진은 참고용일 뿐, 공식 가이드 다이어그램이 우선. */
-  .l-to-nameline-row{display:flex; justify-content:space-between; align-items:center; gap:2mm;}
-  /* 가이드 표 기준 운송장번호바코드(항목8)는 상단/하단 두 인스턴스 모두 9mm */
-  .l-to-nameline-row .top-tracking-barcode{height:9mm; flex-shrink:0;}
+  /* 바코드(9mm)를 이름/전화번호 줄과 같은 flex row에 넣고 align-items:center로 맞췄더니, 그 줄
+     높이가 바코드 높이(9mm)에 맞춰지면서 정작 10pt 글자 위아래로 빈 공간이 많이 남았음 — 실제
+     인쇄물에서 "인쇄테스트 위에 빈 공간, 아래 한 줄 뜨고 주소" 로 사용자가 지적(2026.10.02).
+     CJ 가이드 샘플도 실제로는 바코드가 이름줄+주소줄 두 줄 높이에 걸쳐 오른쪽에 떠있는 구조라,
+     flex 대신 float:right로 바꿔서 이름/주소 텍스트가 바코드 옆을 자연스럽게 감싸고 올라붙게 함
+     (float는 꽉 채워야 하는 만큼만 공간을 차지해서 텍스트 줄 사이에 인위적인 빈 공간이 안 생김). */
+  .top-tracking-barcode{height:9mm; float:right; margin-left:2mm;}
   /* 주소약칭(항목10) 글자수가 주문마다 달라서(예: "원천 627 테라타워" vs "두산위브 상가동 208호") 폭을 넘기 쉬움
-     → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리 */
-  .l-to-detail-clip{overflow:hidden; min-width:0; margin-top:0.3mm;}
+     → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리. clear:both로 위 바코드(float) 아래에서 항상
+     전체 폭을 쓰도록 강제 — 안 그러면 바코드 옆 좁은 공간 안에서 축소 계산이 꼬일 수 있음. */
+  .l-to-detail-clip{overflow:hidden; min-width:0; margin-top:0.3mm; clear:both;}
 
   /* "받는분"/"보내는분" 캡션은 실물 CJ 송장 용지 왼쪽 끝에 파란색으로 이미 인쇄돼있어서(실물 인쇄 확인 완료)
-     텍스트를 중복 출력하지 않음 — 단, 그 자리는 실물 용지 인쇄 위치와 겹치지 않도록 여백만 그대로 비워둠 */
-  .l-block{display:flex; align-items:center; border-top:1px solid #ccc; padding-left:9mm; box-sizing:border-box;}
+     텍스트를 중복 출력하지 않음 — 단, 그 자리는 실물 용지 인쇄 위치와 겹치지 않도록 여백만 그대로 비워둠.
+     실제 인쇄물을 자로 재보니(2026.10.02) 그 파란 캡션 폭은 약 5mm인데 9mm를 비워뒀던 거라 캡션과
+     글자 사이에 불필요한 빈 여백이 있었음 — 5.5mm로 줄임(약간의 안전 여유만 남김). */
+  .l-block{display:flex; align-items:center; border-top:1px solid #ccc; padding-left:5.5mm; box-sizing:border-box;}
 
   /* 항목7(받는분성명/전화번호, 10pt) / 항목9(받는분주소, 9pt) / 항목10(주소약칭, 24pt, CJ 주소정제 API의 CLSFADDR값)
      가이드 좌측 세로치수 기준 받는분 블록 높이는 20mm인데, min-height로만 반영함(flex-basis 고정 X) —
@@ -365,10 +372,8 @@
 
         <div class="l-block l-to">
           <div class="l-to-main">
-            <div class="l-to-nameline-row">
-              <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
-              <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
-            </div>
+            <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
+            <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
             <div class="l-to-fulladdr">${esc(toFullAddr) || '-'}</div>
             <div class="l-to-detail-clip"><div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div></div>
           </div>
