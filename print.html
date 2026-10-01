@@ -131,7 +131,13 @@
      밀어내기만 하고 절대 겹치지 않음. */
   .l-to{flex-shrink:0; min-height:20mm;}
   .l-to-main{flex:1; min-width:0;}
-  .l-to-nameline{font-size:10pt; color:#222; font-weight:700;}
+  /* 2026.10.03: 수취인명/연락처가 마스킹 후 길어지면(예: "인쇄테스****  010-1234-****") 바코드
+     옆 남은 폭을 넘겨서 전화번호가 다음 줄로 줄바꿈되는 문제가 실제 인쇄로 확인됨 — 주소약칭(항목10)/
+     구역명(항목18)과 같은 "넘칠 때만 축소" 패턴 적용. 바깥(.l-to-nameline-clip)은 플로트 바코드 옆에
+     남는 폭만큼만 자동으로 차지하고(overflow:hidden으로 줄바꿈 대신 자르기), 안쪽(.l-to-nameline)은
+     white-space:nowrap으로 한 줄 유지하면서 넘치면 JS(shrinkToFit)가 비율 유지한 채 축소. */
+  .l-to-nameline-clip{overflow:hidden;}
+  .l-to-nameline{font-size:10pt; color:#222; font-weight:700; white-space:nowrap; transform-origin:left center;}
   .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.3mm; line-height:1.15; font-weight:500;}
   /* 가이드 표 기준 주소약칭(항목10)은 24pt — 19개 항목 전수 재확인(2026.09.30) 중 20pt로 돼있던 걸 발견해 수정 */
   .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95; white-space:nowrap; transform-origin:left center;}
@@ -378,7 +384,7 @@
         <div class="l-block l-to">
           <div class="l-to-main">
             <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
-            <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
+            <div class="l-to-nameline-clip"><div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div></div>
             <div class="l-to-fulladdr">${esc(toFullAddr) || '-'}</div>
             <div class="l-to-detail-clip"><div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div></div>
           </div>
@@ -434,15 +440,19 @@
 
       // 항목5: 분류코드바코드 - 대분류코드만 단독으로, CODE128A(대문자/숫자 전용) 인코딩
       // 2026.10.03: 사용자가 가이드 이미지를 치수선과 함께 재확인 — 높이 15mm/길이 30mm가 맞음
-      // (이전에 9mm/약34mm로 잡았던 건 가이드를 잘못 읽은 것). CSS에서 height를 9→15mm로 올렸고,
-      // 여기 width는 길이가 30mm로 나오도록 비례 축소(1.65→0.87).
+      // (이전에 9mm/약34mm로 잡았던 건 가이드를 잘못 읽은 것). CSS에서 height를 9→15mm로 올림.
+      // ⚠️ 같은 날 바로잡음: SVG는 CSS height만 지정하면 세로만 그만큼 늘어나고(비율 유지 X),
+      // 가로 길이는 오직 여기 width 파라미터(막대 1개당 px)로만 결정됨 — height와 무관한 별개 값.
+      // 그런데 "height를 9→15mm로 올렸으니 width도 비율대로 줄여야 한다"고 잘못 계산해서
+      // 1.65→0.87로 내렸더니 실제 길이가 18mm로 너무 짧아짐(사용자 피드백: "왜이리 작아").
+      // width는 길이하고만 비례하므로, 30mm 목표면 기존 1.65(≈34mm 보정값) 기준 1.65*(30/34)=1.46로만 조정.
       if (majorCode) {
         try {
-          JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128A', width: 0.87, height: 34, displayValue: false, margin: 0 });
+          JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128A', width: 1.46, height: 34, displayValue: false, margin: 0 });
         } catch (e) {
           // 대분류코드에 소문자 등 CODE128A로 표현 불가한 문자가 섞여 있으면 일반 CODE128로 폴백
           try {
-            JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128', width: 0.87, height: 34, displayValue: false, margin: 0 });
+            JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128', width: 1.46, height: 34, displayValue: false, margin: 0 });
           } catch (e2) { /* 그래도 안 되면 조용히 스킵 */ }
         }
       }
@@ -452,9 +462,14 @@
       // 자릿수가 홀수 등으로 실패하면 일반 CODE128로 폴백.
       // 2026.10.03: 사용자가 가이드 이미지를 치수선과 함께 재확인 — 상단 바코드는 높이 5mm/길이 35mm가
       // 맞음(이전에 9mm/약38.5mm로 잡았던 건 가이드를 잘못 읽은 것). CSS에서 top-tracking-barcode의
-      // height를 9→5mm로 낮췄고, 여기 width는 길이가 35mm로 나오도록 비례 확대(1.45→2.37).
+      // height를 9→5mm로 낮춤.
+      // ⚠️ 같은 날 바로잡음: height(세로)와 width 파라미터(가로 길이)는 서로 무관한 별개 값인데
+      // "height가 줄었으니 width를 올려서 길이를 맞춰야 한다"고 잘못 계산해서 1.45→2.37로 올렸더니
+      // 실제 길이가 63mm 가까이로 너무 길어져서, 바코드 옆 받는분 이름/연락처 자리가 부족해져
+      // 연락처가 두 줄로 줄바꿈되는 문제가 생김(실인쇄로 확인). width는 길이하고만 비례하므로,
+      // 35mm 목표면 기존 1.45(≈38.5mm 보정값) 기준 1.45*(35/38.5)=1.32로만 조정.
       // 하단 footer 바코드(barcode_footer_)는 별도 영역(.l-footer-right)이라 이번 피드백 대상이 아니라서 그대로 둠.
-      [['barcode_toptrk_', 2.37, 34], ['barcode_footer_', 1.3, 34]].forEach(([prefix, width, height]) => {
+      [['barcode_toptrk_', 1.32, 34], ['barcode_footer_', 1.3, 34]].forEach(([prefix, width, height]) => {
         try {
           JsBarcode('#' + prefix + idx, trackingNo, { format: 'CODE128C', width, height, displayValue: false, margin: 0 });
         } catch (e) {
@@ -486,6 +501,7 @@
   }
   function fitZoneCode() {
     shrinkToFit('.l-zone-code', '.l-zone-code-inner');
+    shrinkToFit('.l-to-nameline-clip', '.l-to-nameline');
     shrinkToFit('.l-to-detail-clip', '.l-to-detail');
     // 항목18(배달점소-별칭)도 가이드 기준 18pt를 유지하되, 점소명이 길면(예: "수원아주-K18-2구역")
     // 줄바꿈되며 윗줄을 침범하던 버그(2026.10.01 실인쇄로 확인)를 같은 "넘칠 때만 축소" 방식으로 방지
