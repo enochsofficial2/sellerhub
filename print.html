@@ -134,10 +134,21 @@
      min-height 없이 내용 크기 그대로 둠(겹칠 위험도 없는 블록이라 안전함) */
   .l-from{flex-shrink:0;}
   .l-from-main{flex:1; min-width:0;}
-  .l-from-top{display:flex; justify-content:space-between; align-items:center;}
+  /* 수량/운임/정산 값(1/0/신용)은 실물 용지에 이미 찍혀있는 "수량"/"운임"/"정산" 파란 캡션 바로 옆에
+     들어가야 하는데, 그 캡션들은 보내는분 성명/전화번호 글자 길이와 무관하게 용지 고정 위치에 인쇄돼있음.
+     그래서 이름 옆에 자연스럽게 붙이는 flex 방식(예전 justify-content:space-between으로 맨 오른쪽 끝에
+     몰아두던 방식) 대신, CJ 공식 가이드 PDF 샘플 이미지를 픽셀 단위로 측정해 라벨(123mm) 기준 캡션 위치를
+     mm로 환산한 뒤, 보내는분 줄(.l-from-top) 왼쪽 끝(라벨 왼쪽 끝에서 패딩 3mm+받는분/보내는분 캡션칸
+     9mm = 12mm 지점)을 기준으로 absolute 좌표를 줘서 이름 길이와 상관없이 항상 같은 자리에 찍히게 함
+     (2026.10.02, 실제 인쇄물 사진에서 "수량" 라벨과 주소약칭 큰 글씨가 겹쳐 보인다는 피드백 반영 —
+     값 위치를 왼쪽으로 당겨 각 라벨 바로 옆에 오도록 재조정). 가이드도 "참고사항"이라 했으므로 라벨 폭에
+     약간의 여유(0.3mm 안쪽 패딩 없이 값 폭만큼만)를 두고 overflow는 클립하지 않음. */
+  .l-from-top{display:flex; align-items:center; position:relative;}
   .l-from-name{font-weight:700; font-size:7pt;}
-  .l-from-chips{display:flex; gap:4mm; align-items:center; font-size:10pt;}
-  .l-from-chips .chip-label{color:#3E7FC1; font-weight:700; margin-right:0.8mm;}
+  .l-from-chips{position:absolute; left:0; top:50%; width:100%; transform:translateY(-50%); font-size:10pt; font-weight:700; white-space:nowrap;}
+  .l-from-chips .chip-qty{position:absolute; left:56mm;}
+  .l-from-chips .chip-fee{position:absolute; left:81mm;}
+  .l-from-chips .chip-settle{position:absolute; left:100mm;}
   .l-from-bottom{display:flex; justify-content:space-between; align-items:baseline; margin-top:0.3mm; gap:2mm;}
   .l-from-addr{font-size:8pt; color:#333; font-weight:500; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .l-from-phone{font-size:7pt; color:#222; font-weight:700;}
@@ -368,9 +379,9 @@
             <div class="l-from-top">
               <span class="l-from-name">${store.name ? esc(store.name) : '(내정보에서 출고지 정보를 설정해주세요)'}　${esc(store.phone) || '-'}</span>
               <span class="l-from-chips">
-                <span>${formatWon(order['수량'])}</span>
-                <span>0</span>
-                <span>신용</span>
+                <span class="chip-qty">${formatWon(order['수량'])}</span>
+                <span class="chip-fee">0</span>
+                <span class="chip-settle">신용</span>
               </span>
             </div>
             <div class="l-from-bottom">
