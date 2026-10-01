@@ -37,25 +37,36 @@
     font-size:9pt; display:flex; flex-direction:column; overflow:hidden; padding:1mm 3mm;}
 
   /* 항목1~4: 운송장번호 / 접수일자 / 출력매수 / 재출력여부
-     실물 사진 비교 결과: 운송장번호는 제자리인데, 날짜는 그보다 훨씬 오른쪽(CJ 로고 바로 앞)에 붙어있고
-     출력매수(1/1)는 날짜와 같은 줄이 아니라 그 아래 줄에 별도로, 우측 끝에 작게 찍혀있었음.
-     그래서 날짜+재출력표시를 오른쪽으로 묶고, 출력매수는 l-head 바깥의 별도 줄(.l-page-row)로 뺌. */
-  .l-head{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1.5px solid #AFCBE8; padding-bottom:0.5mm; flex-shrink:0; gap:2mm;}
+     CJ 공식 운송장 양식 가이드 PDF(123x100mm 다이어그램+항목표)를 직접 열어서 확인(2026.10.01) —
+     1(운송장번호)~4(재출력여부)는 가이드 샘플 이미지에서 전부 한 줄에 나란히 배치돼있음.
+     어제(10.01) 사진 비교만으로 "1/1을 별도 줄로 빼야 한다"고 바꿨던 게 가이드와 어긋나 원복함.
+     가이드 다이어그램 좌측 세로 치수를 직접 재서 확인(2026.10.01): 라벨 100mm 높이가 위에서부터
+     10(헤더)+15(구역바코드)+20(받는분)+7(보내는분)+33(상품~준수사항)+15(푸터) = 100mm로 정확히 떨어짐.
+     이 비율을 각 블록의 flex-basis(높이)로 고정해서 실제 비율이 가이드 샘플과 최대한 가깝도록 함.
+     (가로 치수 "6,3,30,2,5,35,10"은 라벨 전체 폭이 아니라 헤더 한 줄 내부 간격이었고, 가이드 하단에
+     "분류코드/바코드 공간 간격은 참고사항, 겹치지 않고 바코드 리딩 이슈 없게만 하라"고 명시돼 있어서
+     실제 주문마다 달라지는 글자수(운송장번호, 날짜 등) 때문에 그 숫자들을 픽셀 단위로 고정하진 않음) */
+  .l-head{flex:0 0 10mm; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #AFCBE8; gap:2mm; overflow:hidden;}
   .l-head .no-label{color:#3E7FC1; font-size:8pt; font-weight:700; margin-right:1.5mm; vertical-align:top;}
   .l-head .no-value{font-weight:900; font-size:12pt; letter-spacing:0.3px;}
-  .l-head-right{display:flex; align-items:baseline; gap:3mm;}
   .l-head .date{color:#333; font-size:8pt; font-weight:700;}
+  .l-head .page{color:#888; font-size:8pt;}
   .l-head .reprint{color:#B34700; font-size:8pt; font-weight:700;}
-  .l-page-row{text-align:right; color:#888; font-size:8pt; flex-shrink:0; padding:0.3mm 0 0;}
 
   /* 항목5(분류코드바코드) / 항목6(분류코드 텍스트, 가이드 표 크기 36+53+36pt 그대로 적용) / 항목19(특수문자1, 30pt)
      지역에 따라 대분류/서브코드 자릿수가 가이드 샘플("4W44-4g")보다 훨씬 길게 오는 경우가 실제로 있어서
      (예: 대분류 6자리+서브 2자리), 고정 pt 크기 그대로면 폭을 넘어 잘려버림. 그래서 폭이 넘칠 때만
      JS(fitZoneCode)가 transform:scale로 전체를 비율 유지한 채 줄여서 절대 잘리지 않게 함. */
-  .l-zonebar{display:flex; align-items:flex-start; gap:2mm; padding:0.3mm 0; flex-shrink:0; min-height:20mm; overflow:hidden;}
-  /* 실물 사진 비교 결과 이 바코드(항목5)가 우리꺼보다 거의 2배 가까이 더 길고(세로로 더 높고) 얇았음.
-     9mm는 너무 낮고 두꺼워 보였던 원인 — 17mm로 올리고 JsBarcode width도 살짝 줄임(drawBarcodes 참고) */
-  .l-zonebar .zc-barcode{height:17mm; flex-shrink:0;}
+  /* 가이드 좌측 세로치수 기준 이 블록의 "기본" 높이는 15mm인데, 우측에 별도로 "26mm" 치수가
+     따로 표기돼있는 걸 확인함(2026.10.01) — 이건 분류코드 서브코드 첫 글자(53pt)가 받는분
+     이름줄 쪽으로 자연스럽게 침범(bleed)하는 걸 CJ 샘플도 전제하고 있다는 뜻(항목6 비고란
+     "SUBCLSFCD 값 중 'g'의 운송장바코드 침범으로 위치 조정 필수"와 일치). 그래서 기본 15mm
+     그대로 고정하지 않고, 기존에 실인쇄 테스트로 이미 검증된 19mm(15mm+안전여유)를 유지해서
+     53pt 글자가 잘리지 않도록 함 — 사용자 요청대로 "실물과 약간 다를 수 있으니 여유공간은 둔다". */
+  .l-zonebar{flex:0 0 19mm; box-sizing:border-box; display:flex; align-items:flex-start; gap:2mm; padding:0.3mm 0; overflow:hidden;}
+  /* 가이드 표 기준 분류코드바코드(항목5)는 9mm — 어제(10.01) 사진만 보고 17mm로 올렸던 게
+     가이드 직접 확인 결과 틀렸음을 확인(2026.10.01), 9mm로 원복 */
+  .l-zonebar .zc-barcode{height:9mm; flex-shrink:0;}
   /* overflow(자르기)와 transform:scale(축소)를 같은 요소에 같이 걸면 브라우저가 "자르기"를
      축소 이전(레이아웃 단계) 크기 기준으로 먼저 적용해버려서, 정작 축소해도 잘린 채로 남는 문제가 있었음
      (실제 테스트로 확인). 그래서 자르는 역할(overflow:hidden, 폭 계산)은 바깥 래퍼(.l-zone-code)가,
@@ -68,45 +79,45 @@
   .l-zone-code-inner .zc-sub2{font-size:36pt;}
   .l-zone-code-inner .zc-special{font-size:30pt; margin-left:2mm;}
 
-  /* CJ 실제 발송 라벨 사진(2026.10.01)과 픽셀 단위로 다시 비교한 결과, 09.30에 "7→9→10"이 맞다고
-     수정했던 순서가 틀렸던 것으로 확인됨 — 실물은 10(주소약칭,큰글씨)이 맨 위에 오고 그 줄 우측에
-     항목8(운송장번호바코드) 상단 인스턴스가 나란히 붙어있음. 그 아래에 7(성명/전화), 그 아래에
-     9(받는분주소,작은글씨) 순서. 이전 수정 때 사진 없이 가이드 텍스트만 보고 순서를 뒤집은 게 잘못이었고,
-     이번엔 실제 CJ 라벨 사진을 직접 픽셀 비교해서 확정함. 순서를 10+바코드 → 7 → 9 로 되돌림. */
-  .l-to-detail-row{display:flex; justify-content:space-between; align-items:center; gap:2mm;}
-  /* 항목8 상단 인스턴스는 큰 글씨(24pt) 줄 옆에 붙으면서 실물처럼 더 얇고 길게 보이도록 높이를 올림
-     (JsBarcode width도 줄임 — drawBarcodes 참고) */
-  .l-to-detail-row .top-tracking-barcode{height:10mm; flex-shrink:0;}
+  /* CJ 공식 운송장 양식 가이드 PDF를 직접 열어서 확인(2026.10.01) — 가이드 샘플 다이어그램에 명확히
+     7(성명/전화, 바코드가 같은 줄 우측에 붙음) → 9(받는분주소, 작은글씨, 2줄) → 10(주소약칭, 큰글씨)
+     순서로 나와있음. 어제(10.01) 사진 두 장만 보고 "10+바코드 → 7 → 9"로 뒤집었던 게 가이드와 어긋나서
+     원복함 — 사진은 참고용일 뿐, 공식 가이드 다이어그램이 우선. */
+  .l-to-nameline-row{display:flex; justify-content:space-between; align-items:center; gap:2mm;}
+  /* 가이드 표 기준 운송장번호바코드(항목8)는 상단/하단 두 인스턴스 모두 9mm */
+  .l-to-nameline-row .top-tracking-barcode{height:9mm; flex-shrink:0;}
   /* 주소약칭(항목10) 글자수가 주문마다 달라서(예: "원천 627 테라타워" vs "두산위브 상가동 208호") 폭을 넘기 쉬움
      → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리 */
-  .l-to-detail-clip{flex:1; overflow:hidden; min-width:0;}
+  .l-to-detail-clip{overflow:hidden; min-width:0; margin-top:0.3mm;}
 
   /* "받는분"/"보내는분" 캡션은 실물 CJ 송장 용지 왼쪽 끝에 파란색으로 이미 인쇄돼있어서(실물 인쇄 확인 완료)
      텍스트를 중복 출력하지 않음 — 단, 그 자리는 실물 용지 인쇄 위치와 겹치지 않도록 여백만 그대로 비워둠 */
-  .l-block{display:flex; border-top:1px solid #ccc; flex-shrink:0; padding-left:9mm;}
+  .l-block{display:flex; align-items:center; border-top:1px solid #ccc; padding-left:9mm; box-sizing:border-box; overflow:hidden;}
 
-  /* 항목7(받는분성명/전화번호) / 항목9(받는분주소, 9pt) / 항목10(주소약칭, 24pt, CJ 주소정제 API의 CLSFADDR값) */
-  .l-to{padding:0.6mm 0;}
+  /* 항목7(받는분성명/전화번호, 10pt) / 항목9(받는분주소, 9pt) / 항목10(주소약칭, 24pt, CJ 주소정제 API의 CLSFADDR값)
+     가이드 좌측 세로치수 기준 받는분 블록 높이 = 20mm 그대로 flex-basis로 고정 */
+  .l-to{flex:0 0 20mm;}
   .l-to-main{flex:1; min-width:0;}
-  .l-to-nameline{font-size:10pt; color:#222; font-weight:700; margin-top:0.3mm;}
+  .l-to-nameline{font-size:10pt; color:#222; font-weight:700;}
   .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.3mm; line-height:1.15; font-weight:500;}
   /* 가이드 표 기준 주소약칭(항목10)은 24pt — 19개 항목 전수 재확인(2026.09.30) 중 20pt로 돼있던 걸 발견해 수정 */
   .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95; white-space:nowrap; transform-origin:left center;}
 
-  /* 항목11(보내는분성명/전화번호) / 항목12~14(운임그룹조정+수량/운임/운임구분) / 항목15(보내는분주소)
-     CJ 실물 라벨 재확인(2026.10.01): "수량"/"운임"/"정산" 캡션은 받는분/보내는분 탭과 마찬가지로
-     실물 용지에 파란색 칩 모양으로 이미 인쇄돼있는 고정 항목이었음 — 우리가 "수량"/"운임"/"결제"라는
-     텍스트를 직접 또 찍고 있던 게 중복 인쇄였고, 심지어 "결제"는 실물 캡션("정산")과 단어도 달랐음.
-     그래서 캡션 텍스트는 전부 빼고 숫자/값만 찍도록 수정. 값들은 보내는분 이름 줄이 아니라
-     그 아래 보내는분 주소 줄과 같은 높이에 있었어서 l-from-bottom 쪽으로 옮김. */
-  .l-from{padding:0.6mm 0;}
+  /* 항목11(보내는분성명/전화번호, 가이드 표 기준 7pt) / 항목12~14(운임그룹조정+수량/운임/운임구분, 10pt) / 항목15(보내는분주소)
+     CJ 공식 가이드 PDF를 직접 열어서 확인(2026.10.01): 가이드 샘플 다이어그램에 "수량"/"운임"/"정산"
+     캡션이 값과 함께 찍혀있는 걸로 명확히 나와있음 — 즉 이 캡션들은 우리가 직접 인쇄하는 게 맞고,
+     어제(10.01) 사진만 보고 "캡션은 실물 인쇄라 빼야 한다"고 지웠던 게 가이드와 어긋나서 원복함.
+     다만 단어는 "결제"가 아니라 가이드 그대로 "정산"으로 고침. 보내는분 이름 글씨 크기도 가이드 표
+     그대로 7pt로 되돌림(어제 9pt로 올렸던 것도 가이드와 어긋났음). */
+  /* 가이드 좌측 세로치수 기준 보내는분 블록 높이 = 7mm 그대로 flex-basis로 고정 */
+  .l-from{flex:0 0 7mm;}
   .l-from-main{flex:1; min-width:0;}
-  .l-from-top{display:flex; align-items:center;}
-  .l-from-name{font-weight:700; font-size:9pt;}
+  .l-from-top{display:flex; justify-content:space-between; align-items:center;}
+  .l-from-name{font-weight:700; font-size:7pt;}
+  .l-from-chips{display:flex; gap:4mm; align-items:center; font-size:10pt;}
+  .l-from-chips .chip-label{color:#3E7FC1; font-weight:700; margin-right:0.8mm;}
   .l-from-bottom{display:flex; justify-content:space-between; align-items:baseline; margin-top:0.3mm; gap:2mm;}
   .l-from-addr{font-size:8pt; color:#333; font-weight:500; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .l-from-right-group{display:flex; align-items:baseline; gap:3mm; flex-shrink:0;}
-  .l-from-chips{display:flex; gap:4mm; font-size:10pt; font-weight:700; color:#111;}
   .l-from-phone{font-size:7pt; color:#222; font-weight:700;}
   .l-from-recv-repeat{font-size:7pt; color:#777; font-weight:500; flex-shrink:0; white-space:nowrap;}
 
@@ -128,20 +139,22 @@
   .l-spacer{flex:1 1 auto;}
 
   /* 항목18(배달점소-별칭) / 항목8 하단(운송장번호바코드)
-     CJ 실물 라벨 재확인(2026.10.01): 이 구역은 배송메시지 칸이 아니라 배달점소-별칭(항목18)이 맞음 —
-     실물도 동일 위치에 "신상일-F14-4구역" 같은 점소명이 찍혀있고 배송메시지는 그 위 별도 줄(.l-delivery-msg)
-     이라 서로 겹치지 않음. 다만 18pt는 실물보다 훨씬 커서 글자가 줄바꿈되며 위 문구를 침범하는 걸 실제
-     인쇄로 확인(2026.10.01) → 실물 비율에 맞춰 12pt로 줄이고, 그래도 넘치면 잘리지 않고 말줄임 처리되게 함.
-     또 실물엔 이 줄 위에 받는분 주소약칭(항목10)을 한 번 더 작게 반복 표시하고 있어서 그 줄(.l-footer-repeat)도 추가.
-     "운임"/"결제" 캡션도 l-from-chips와 같은 이유로 실물엔 없고 숫자/값만 있어서 라벨 텍스트 제거. */
-  .l-footer{display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px solid #000; padding-top:0.6mm; flex-shrink:0;}
+     CJ 공식 가이드 PDF 기준 항목18은 18pt가 맞음 — 어제(10.01) 실제 인쇄 테스트에서 18pt일 때
+     구역명이 길면 줄바꿈되며 윗줄을 침범하는 버그를 보고 12pt로 줄였던 건데, 가이드 사양을 깨는 임시방편이었음.
+     대신 분류코드(zc)/주소약칭(항목10)과 같은 "넘칠 때만 축소" 패턴을 적용해서 18pt를 유지하면서도
+     길어지면 안전하게 줄어들게 함(.l-footer-zone-clip 바깥 래퍼 + .l-footer-zone 안쪽 축소 대상).
+     받는분 주소약칭(항목10) 반복 표시줄(.l-footer-repeat)은 실물 라벨에 실제로 있는 걸 확인해서 유지.
+     "운임"/"결제" 캡션도 l-from-chips와 같은 이유로 가이드 기준 "정산"이 맞아서 복원+단어 수정. */
+  /* 가이드 좌측 세로치수 기준 푸터 블록 높이 = 15mm 그대로 flex-basis로 고정 */
+  .l-footer{flex:0 0 15mm; box-sizing:border-box; display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px solid #000; padding-top:0.6mm; overflow:hidden;}
   .l-footer-left{flex:1; min-width:0; overflow:hidden;}
   .l-footer-repeat{font-size:8pt; color:#555; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .l-footer-zone{font-size:12pt; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .l-footer-zone-clip{overflow:hidden; min-width:0;}
+  .l-footer-zone{font-size:18pt; font-weight:900; line-height:1; white-space:nowrap; transform-origin:left center;}
   .l-footer-mid{text-align:right; margin-right:3mm; flex-shrink:0;}
   .l-footer-qty{font-size:10pt; font-weight:700;}
   .l-footer-page{font-size:8pt; color:#888;}
-  .l-footer-chips{font-size:10pt; color:#111; font-weight:700;}
+  .l-footer-chips{font-size:9pt; color:#3E7FC1; font-weight:700;}
   .l-footer-right{text-align:center; flex-shrink:0;}
   .l-footer-right svg{height:9mm; width:34mm;}
   .l-footer-tracking{font-size:9px; letter-spacing:0.5px; margin-top:0.5mm; font-family:'Pretendard', sans-serif;}
@@ -306,12 +319,10 @@
       <div class="label">
         <div class="l-head">
           <div><span class="no-label" style="visibility:hidden">운송장번호</span><span class="no-value">${esc(formatTrackingDisplay(trackingNo)) || '-'}</span></div>
-          <div class="l-head-right">
-            <div class="date">${esc(dateStr)}</div>
-            <div class="reprint">-</div>
-          </div>
+          <div class="date">${esc(dateStr)}</div>
+          <div class="page">1/1</div>
+          <div class="reprint">-</div>
         </div>
-        <div class="l-page-row">1/1</div>
 
         <div class="l-zonebar">
           <svg class="zc-barcode" id="${barcodeIdMajor}"></svg>
@@ -320,12 +331,12 @@
 
         <div class="l-block l-to">
           <div class="l-to-main">
-            <div class="l-to-detail-row">
-              <div class="l-to-detail-clip"><div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div></div>
+            <div class="l-to-nameline-row">
+              <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
               <svg class="top-tracking-barcode" id="${barcodeIdTopTracking}"></svg>
             </div>
-            <div class="l-to-nameline">${esc(maskedName)}　${esc(maskedPhone)}</div>
             <div class="l-to-fulladdr">${esc(toFullAddr) || '-'}</div>
+            <div class="l-to-detail-clip"><div class="l-to-detail">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || '-'}</div></div>
           </div>
         </div>
 
@@ -333,17 +344,15 @@
           <div class="l-from-main">
             <div class="l-from-top">
               <span class="l-from-name">${store.name ? esc(store.name) : '(내정보에서 출고지 정보를 설정해주세요)'}　${esc(store.phone) || '-'}</span>
+              <span class="l-from-chips">
+                <span><span class="chip-label">수량</span>${formatWon(order['수량'])}</span>
+                <span><span class="chip-label">운임</span>0</span>
+                <span><span class="chip-label">정산</span>신용</span>
+              </span>
             </div>
             <div class="l-from-bottom">
               <span class="l-from-addr">${esc(store.address) || ''}${store.addressDetail ? ' ' + esc(store.addressDetail) : ''}</span>
-              <span class="l-from-right-group">
-                <span class="l-from-chips">
-                  <span>${formatWon(order['수량'])}</span>
-                  <span>0</span>
-                  <span>신용</span>
-                </span>
-                <span class="l-from-recv-repeat">받는분: ${esc(maskedName)} / ${esc(maskedPhone)}</span>
-              </span>
+              <span class="l-from-recv-repeat">받는분: ${esc(maskedName)} / ${esc(maskedPhone)}</span>
             </div>
           </div>
         </div>
@@ -357,12 +366,12 @@
         <div class="l-footer">
           <div class="l-footer-left">
             <div class="l-footer-repeat">${esc(zone.addrAbbrev) || esc(toDetail) || esc(toBase) || ''}</div>
-            <div class="l-footer-zone">${esc(zone.zoneName) || '-'}</div>
+            <div class="l-footer-zone-clip"><div class="l-footer-zone">${esc(zone.zoneName) || '-'}</div></div>
           </div>
           <div class="l-footer-mid">
             <div class="l-footer-qty">총수량 : ${formatWon(order['수량'])}</div>
             <div class="l-footer-page">(1/1)</div>
-            <div class="l-footer-chips">0　신용</div>
+            <div class="l-footer-chips">운임 0　정산 신용</div>
           </div>
           <div class="l-footer-right">
             <svg id="${barcodeIdFooter}"></svg>
@@ -380,24 +389,24 @@
       const majorCode = String(o['송장_대분류코드'] || '').replace(/\s+/g, '');
 
       // 항목5: 분류코드바코드 - 대분류코드만 단독으로, CODE128A(대문자/숫자 전용) 인코딩
-      // CJ 실물 라벨 재확인(2026.10.01): 실물 바코드가 우리보다 거의 2배 길고 얇았음 — height를 34→58로
-      // 올리고 width는 1.4→1.25로 살짝 줄여서 실물 비율에 맞춤 (CSS .zc-barcode height도 9mm→17mm로 변경)
+      // CJ 공식 가이드 PDF 기준 9mm — 어제(10.01) 사진만 보고 height 58/width 1.25로 올렸던 걸
+      // 가이드 직접 확인 후 원래 값(34/1.4)으로 원복(2026.10.01)
       if (majorCode) {
         try {
-          JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128A', width: 1.25, height: 58, displayValue: false, margin: 0 });
+          JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128A', width: 1.4, height: 34, displayValue: false, margin: 0 });
         } catch (e) {
           // 대분류코드에 소문자 등 CODE128A로 표현 불가한 문자가 섞여 있으면 일반 CODE128로 폴백
           try {
-            JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128', width: 1.25, height: 58, displayValue: false, margin: 0 });
+            JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128', width: 1.4, height: 34, displayValue: false, margin: 0 });
           } catch (e2) { /* 그래도 안 되면 조용히 스킵 */ }
         }
       }
 
       if (!trackingNo) return;
       // 항목8(상단/하단 두 곳): 운송장번호바코드 - CODE128C(숫자 전용, 2자리씩 압축) 인코딩 시도,
-      // 자릿수가 홀수 등으로 실패하면 일반 CODE128로 폴백
-      // 상단 인스턴스(barcode_toptrk_)는 실물에서 얇고 길게 나왔어서 width 1.1→0.9, height 34→40으로 조정
-      [['barcode_toptrk_', 0.9, 40], ['barcode_footer_', 1.3, 34]].forEach(([prefix, width, height]) => {
+      // 자릿수가 홀수 등으로 실패하면 일반 CODE128로 폴백. 가이드 기준 상단/하단 모두 9mm라
+      // 어제(10.01) 올렸던 상단 인스턴스 width/height도 원래 값(1.1/34)으로 원복(2026.10.01)
+      [['barcode_toptrk_', 1.1, 34], ['barcode_footer_', 1.3, 34]].forEach(([prefix, width, height]) => {
         try {
           JsBarcode('#' + prefix + idx, trackingNo, { format: 'CODE128C', width, height, displayValue: false, margin: 0 });
         } catch (e) {
@@ -430,6 +439,9 @@
   function fitZoneCode() {
     shrinkToFit('.l-zone-code', '.l-zone-code-inner');
     shrinkToFit('.l-to-detail-clip', '.l-to-detail');
+    // 항목18(배달점소-별칭)도 가이드 기준 18pt를 유지하되, 점소명이 길면(예: "수원아주-K18-2구역")
+    // 줄바꿈되며 윗줄을 침범하던 버그(2026.10.01 실인쇄로 확인)를 같은 "넘칠 때만 축소" 방식으로 방지
+    shrinkToFit('.l-footer-zone-clip', '.l-footer-zone');
   }
 
   async function render() {
