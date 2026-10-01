@@ -82,9 +82,11 @@
      (받는분/보내는분 블록과 같은 이유로 flex-basis 고정이 아니라 min-height로 — 19mm보다 더 필요하면
      늘어나게 해서 절대 잘리지 않게 함) */
   .l-zonebar{flex-shrink:0; min-height:19mm; box-sizing:border-box; display:flex; align-items:flex-start; gap:2mm; padding:0.3mm 0; overflow:hidden;}
-  /* 가이드 표 기준 분류코드바코드(항목5)는 9mm — 어제(10.01) 사진만 보고 17mm로 올렸던 게
-     가이드 직접 확인 결과 틀렸음을 확인(2026.10.01), 9mm로 원복 */
-  .l-zonebar .zc-barcode{height:9mm; flex-shrink:0;}
+  /* 2026.10.01엔 9mm로 확인했었으나, 사용자가 가이드 이미지를 치수선과 함께 직접 재확인한 결과
+     분류코드바코드(항목5)는 높이 15mm, 길이 30mm가 맞음(2026.10.03) — 9mm는 잘못 읽은 것이었음.
+     height를 9→15mm로 올리고, width(module 폭)는 길이가 30mm로 나오도록 비례 재계산해서 낮춤
+     (1.65 * (30/15)/(34/9) ≈ 0.87). */
+  .l-zonebar .zc-barcode{height:15mm; flex-shrink:0;}
   /* overflow(자르기)와 transform:scale(축소)를 같은 요소에 같이 걸면 브라우저가 "자르기"를
      축소 이전(레이아웃 단계) 크기 기준으로 먼저 적용해버려서, 정작 축소해도 잘린 채로 남는 문제가 있었음
      (실제 테스트로 확인). 그래서 자르는 역할(overflow:hidden, 폭 계산)은 바깥 래퍼(.l-zone-code)가,
@@ -107,7 +109,10 @@
      CJ 가이드 샘플도 실제로는 바코드가 이름줄+주소줄 두 줄 높이에 걸쳐 오른쪽에 떠있는 구조라,
      flex 대신 float:right로 바꿔서 이름/주소 텍스트가 바코드 옆을 자연스럽게 감싸고 올라붙게 함
      (float는 꽉 채워야 하는 만큼만 공간을 차지해서 텍스트 줄 사이에 인위적인 빈 공간이 안 생김). */
-  .top-tracking-barcode{height:9mm; float:right; margin-left:2mm;}
+  /* 2026.10.03: 사용자가 가이드 이미지를 치수선과 함께 직접 재확인 — 상단 운송장번호바코드(항목8)는
+     높이 5mm, 길이 35mm가 맞음(9mm는 잘못 읽은 것이었음). height를 9→5mm로 낮추고, width는
+     길이가 35mm로 나오도록 비례 재계산해서 올림(1.45 * (35/5)/(38.5/9) ≈ 2.37). */
+  .top-tracking-barcode{height:5mm; float:right; margin-left:2mm;}
   /* 주소약칭(항목10) 글자수가 주문마다 달라서(예: "원천 627 테라타워" vs "두산위브 상가동 208호") 폭을 넘기 쉬움
      → 분류코드와 같은 방식(넘칠 때만 축소)으로 처리. clear:both로 위 바코드(float) 아래에서 항상
      전체 폭을 쓰도록 강제 — 안 그러면 바코드 옆 좁은 공간 안에서 축소 계산이 꼬일 수 있음. */
@@ -428,31 +433,28 @@
       const majorCode = String(o['송장_대분류코드'] || '').replace(/\s+/g, '');
 
       // 항목5: 분류코드바코드 - 대분류코드만 단독으로, CODE128A(대문자/숫자 전용) 인코딩
-      // CJ 공식 가이드 PDF 기준 높이는 9mm — 어제(10.01) 사진만 보고 height 58/width 1.25로 올렸던 걸
-      // 가이드 직접 확인 후 높이는 원래 값(34)으로 원복(2026.10.01). 길이(width)는 상단 바코드와
-      // 같은 문제였음 — 가이드 샘플 이미지를 재보니 이 바코드도 라벨 기준 약 34mm인데 width:1.4로는
-      // 29mm 정도로 가이드보다 짧게 나와서(2026.10.02, 상단 바코드와 같은 패턴) 1.4→1.65로 올림.
+      // 2026.10.03: 사용자가 가이드 이미지를 치수선과 함께 재확인 — 높이 15mm/길이 30mm가 맞음
+      // (이전에 9mm/약34mm로 잡았던 건 가이드를 잘못 읽은 것). CSS에서 height를 9→15mm로 올렸고,
+      // 여기 width는 길이가 30mm로 나오도록 비례 축소(1.65→0.87).
       if (majorCode) {
         try {
-          JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128A', width: 1.65, height: 34, displayValue: false, margin: 0 });
+          JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128A', width: 0.87, height: 34, displayValue: false, margin: 0 });
         } catch (e) {
           // 대분류코드에 소문자 등 CODE128A로 표현 불가한 문자가 섞여 있으면 일반 CODE128로 폴백
           try {
-            JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128', width: 1.65, height: 34, displayValue: false, margin: 0 });
+            JsBarcode('#barcode_major_' + idx, majorCode, { format: 'CODE128', width: 0.87, height: 34, displayValue: false, margin: 0 });
           } catch (e2) { /* 그래도 안 되면 조용히 스킵 */ }
         }
       }
 
       if (!trackingNo) return;
       // 항목8(상단/하단 두 곳): 운송장번호바코드 - CODE128C(숫자 전용, 2자리씩 압축) 인코딩 시도,
-      // 자릿수가 홀수 등으로 실패하면 일반 CODE128로 폴백. 가이드 기준 상단/하단 모두 9mm 높이인데,
-      // 상단 바코드 길이를 가이드 샘플 이미지에서 직접 재보니(라벨 123mm 기준 약 80.6~119.2mm,
-      // 길이 약 38.6mm) 기존 width:1.1로는 29mm 정도밖에 안 나와서 가이드보다 짧고 왼쪽 여백이
-      // 많이 남았음 — 사용자가 실제 가이드 사진 보여주며 "길게 나와있다"고 피드백(2026.10.02).
-      // width를 1.1→1.45로 올려서 실측 길이(약 38~39mm)에 맞춤 (오른쪽은 이미 .l-to-nameline-row의
-      // justify-content:space-between으로 가이드와 비슷하게 맞춰져 있어서, width를 올리면 자연스럽게
-      // 왼쪽으로 길어짐 — 오른쪽 끝 위치는 그대로 유지됨).
-      [['barcode_toptrk_', 1.45, 34], ['barcode_footer_', 1.3, 34]].forEach(([prefix, width, height]) => {
+      // 자릿수가 홀수 등으로 실패하면 일반 CODE128로 폴백.
+      // 2026.10.03: 사용자가 가이드 이미지를 치수선과 함께 재확인 — 상단 바코드는 높이 5mm/길이 35mm가
+      // 맞음(이전에 9mm/약38.5mm로 잡았던 건 가이드를 잘못 읽은 것). CSS에서 top-tracking-barcode의
+      // height를 9→5mm로 낮췄고, 여기 width는 길이가 35mm로 나오도록 비례 확대(1.45→2.37).
+      // 하단 footer 바코드(barcode_footer_)는 별도 영역(.l-footer-right)이라 이번 피드백 대상이 아니라서 그대로 둠.
+      [['barcode_toptrk_', 2.37, 34], ['barcode_footer_', 1.3, 34]].forEach(([prefix, width, height]) => {
         try {
           JsBarcode('#' + prefix + idx, trackingNo, { format: 'CODE128C', width, height, displayValue: false, margin: 0 });
         } catch (e) {
