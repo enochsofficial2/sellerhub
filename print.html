@@ -42,11 +42,17 @@
      어제(10.01) 사진 비교만으로 "1/1을 별도 줄로 빼야 한다"고 바꿨던 게 가이드와 어긋나 원복함.
      가이드 다이어그램 좌측 세로 치수를 직접 재서 확인(2026.10.01): 라벨 100mm 높이가 위에서부터
      10(헤더)+15(구역바코드)+20(받는분)+7(보내는분)+33(상품~준수사항)+15(푸터) = 100mm로 정확히 떨어짐.
-     이 비율을 각 블록의 flex-basis(높이)로 고정해서 실제 비율이 가이드 샘플과 최대한 가깝도록 함.
+     이 비율을 각 블록의 "최소" 높이(min-height)로 반영해서 실제 비율이 가이드 샘플과 최대한 가깝도록 함.
      (가로 치수 "6,3,30,2,5,35,10"은 라벨 전체 폭이 아니라 헤더 한 줄 내부 간격이었고, 가이드 하단에
      "분류코드/바코드 공간 간격은 참고사항, 겹치지 않고 바코드 리딩 이슈 없게만 하라"고 명시돼 있어서
-     실제 주문마다 달라지는 글자수(운송장번호, 날짜 등) 때문에 그 숫자들을 픽셀 단위로 고정하진 않음) */
-  .l-head{flex:0 0 10mm; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #AFCBE8; gap:2mm; overflow:hidden;}
+     실제 주문마다 달라지는 글자수(운송장번호, 날짜 등) 때문에 그 숫자들을 픽셀 단위로 고정하진 않음)
+     ⚠️ 2026.10.01 실인쇄 피드백: flex-basis(고정 높이)로 박았더니 실제 폰트(Noto Sans KR 웹폰트, 로컬
+     테스트의 폴백 폰트보다 줄간격이 더 큼)로는 받는분(20mm)/보내는분(7mm) 블록 내용이 할당량보다 커져서,
+     align-items:center로 위아래 블록에 걸쳐 튀어나온 부분끼리 겹쳐 찍히는 사고가 실제로 발생함
+     (주소약칭 "원천 627 테라타워" 줄과 보내는분 "수량/운임/정산" 줄이 겹쳐 인쇄됨).
+     그래서 전부 flex-basis(고정) 대신 min-height(최소값)로 바꿈 — 가이드 비율은 그대로 하한선으로
+     유지하되, 실제 내용이 더 필요하면 박스가 늘어나서 다음 블록을 밀어낼지언정 절대 겹치지 않게 함. */
+  .l-head{flex-shrink:0; min-height:10mm; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #AFCBE8; gap:2mm;}
   .l-head .no-label{color:#3E7FC1; font-size:8pt; font-weight:700; margin-right:1.5mm; vertical-align:top;}
   .l-head .no-value{font-weight:900; font-size:12pt; letter-spacing:0.3px;}
   .l-head .date{color:#333; font-size:8pt; font-weight:700;}
@@ -62,8 +68,10 @@
      이름줄 쪽으로 자연스럽게 침범(bleed)하는 걸 CJ 샘플도 전제하고 있다는 뜻(항목6 비고란
      "SUBCLSFCD 값 중 'g'의 운송장바코드 침범으로 위치 조정 필수"와 일치). 그래서 기본 15mm
      그대로 고정하지 않고, 기존에 실인쇄 테스트로 이미 검증된 19mm(15mm+안전여유)를 유지해서
-     53pt 글자가 잘리지 않도록 함 — 사용자 요청대로 "실물과 약간 다를 수 있으니 여유공간은 둔다". */
-  .l-zonebar{flex:0 0 19mm; box-sizing:border-box; display:flex; align-items:flex-start; gap:2mm; padding:0.3mm 0; overflow:hidden;}
+     53pt 글자가 잘리지 않도록 함 — 사용자 요청대로 "실물과 약간 다를 수 있으니 여유공간은 둔다".
+     (받는분/보내는분 블록과 같은 이유로 flex-basis 고정이 아니라 min-height로 — 19mm보다 더 필요하면
+     늘어나게 해서 절대 잘리지 않게 함) */
+  .l-zonebar{flex-shrink:0; min-height:19mm; box-sizing:border-box; display:flex; align-items:flex-start; gap:2mm; padding:0.3mm 0; overflow:hidden;}
   /* 가이드 표 기준 분류코드바코드(항목5)는 9mm — 어제(10.01) 사진만 보고 17mm로 올렸던 게
      가이드 직접 확인 결과 틀렸음을 확인(2026.10.01), 9mm로 원복 */
   .l-zonebar .zc-barcode{height:9mm; flex-shrink:0;}
@@ -92,11 +100,14 @@
 
   /* "받는분"/"보내는분" 캡션은 실물 CJ 송장 용지 왼쪽 끝에 파란색으로 이미 인쇄돼있어서(실물 인쇄 확인 완료)
      텍스트를 중복 출력하지 않음 — 단, 그 자리는 실물 용지 인쇄 위치와 겹치지 않도록 여백만 그대로 비워둠 */
-  .l-block{display:flex; align-items:center; border-top:1px solid #ccc; padding-left:9mm; box-sizing:border-box; overflow:hidden;}
+  .l-block{display:flex; align-items:center; border-top:1px solid #ccc; padding-left:9mm; box-sizing:border-box;}
 
   /* 항목7(받는분성명/전화번호, 10pt) / 항목9(받는분주소, 9pt) / 항목10(주소약칭, 24pt, CJ 주소정제 API의 CLSFADDR값)
-     가이드 좌측 세로치수 기준 받는분 블록 높이 = 20mm 그대로 flex-basis로 고정 */
-  .l-to{flex:0 0 20mm;}
+     가이드 좌측 세로치수 기준 받는분 블록 높이는 20mm인데, min-height로만 반영함(flex-basis 고정 X) —
+     실제 웹폰트 줄간격으로는 20mm를 넘기기 쉬워서, 고정하면 다음 블록(보내는분)과 겹쳐 찍히는 사고가
+     실제로 발생했음(2026.10.01). min-height면 모자랄 때만 20mm, 넘치면 자연스럽게 늘어나 아래 블록을
+     밀어내기만 하고 절대 겹치지 않음. */
+  .l-to{flex-shrink:0; min-height:20mm;}
   .l-to-main{flex:1; min-width:0;}
   .l-to-nameline{font-size:10pt; color:#222; font-weight:700;}
   .l-to-fulladdr{font-size:9pt; color:#444; margin-top:0.3mm; line-height:1.15; font-weight:500;}
@@ -109,8 +120,9 @@
      어제(10.01) 사진만 보고 "캡션은 실물 인쇄라 빼야 한다"고 지웠던 게 가이드와 어긋나서 원복함.
      다만 단어는 "결제"가 아니라 가이드 그대로 "정산"으로 고침. 보내는분 이름 글씨 크기도 가이드 표
      그대로 7pt로 되돌림(어제 9pt로 올렸던 것도 가이드와 어긋났음). */
-  /* 가이드 좌측 세로치수 기준 보내는분 블록 높이 = 7mm 그대로 flex-basis로 고정 */
-  .l-from{flex:0 0 7mm;}
+  /* 가이드 좌측 세로치수 기준 보내는분 블록 높이는 7mm인데, 위 받는분 블록과 같은 이유로
+     flex-basis 고정이 아니라 min-height로 반영 (넘치면 늘어나되 절대 겹치지 않게) */
+  .l-from{flex-shrink:0; min-height:7mm;}
   .l-from-main{flex:1; min-width:0;}
   .l-from-top{display:flex; justify-content:space-between; align-items:center;}
   .l-from-name{font-weight:700; font-size:7pt;}
@@ -145,8 +157,9 @@
      길어지면 안전하게 줄어들게 함(.l-footer-zone-clip 바깥 래퍼 + .l-footer-zone 안쪽 축소 대상).
      받는분 주소약칭(항목10) 반복 표시줄(.l-footer-repeat)은 실물 라벨에 실제로 있는 걸 확인해서 유지.
      "운임"/"결제" 캡션도 l-from-chips와 같은 이유로 가이드 기준 "정산"이 맞아서 복원+단어 수정. */
-  /* 가이드 좌측 세로치수 기준 푸터 블록 높이 = 15mm 그대로 flex-basis로 고정 */
-  .l-footer{flex:0 0 15mm; box-sizing:border-box; display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px solid #000; padding-top:0.6mm; overflow:hidden;}
+  /* 가이드 좌측 세로치수 기준 푸터 블록 높이는 15mm인데, 위와 같은 이유로 flex-basis 고정이 아니라
+     min-height로 반영 (넘치면 늘어나되 절대 겹치지 않게) */
+  .l-footer{flex-shrink:0; min-height:15mm; box-sizing:border-box; display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px solid #000; padding-top:0.6mm;}
   .l-footer-left{flex:1; min-width:0; overflow:hidden;}
   .l-footer-repeat{font-size:8pt; color:#555; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .l-footer-zone-clip{overflow:hidden; min-width:0;}
