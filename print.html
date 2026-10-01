@@ -20,6 +20,10 @@
   .btn-back{background:#fff; color:var(--ink); border:1px solid #DCE1E9 !important;}
   body.embedded .toolbar{display:none;}
   .batch-note{max-width:460px; margin:0 auto 14px; font-size:12px; color:#5C6478; text-align:center;}
+  /* common.js가 모든 화면에 공통으로 주입하는 다크모드 토글 버튼(우측하단 해/달 아이콘) —
+     송장 출력 화면에는 어울리지 않고, 실제 인쇄 미리보기에도 겹쳐 보인다는 피드백(2026.10.01)이 있어서
+     이 페이지에서는 인쇄 여부와 상관없이 항상 숨김 (예전엔 @media print 안에서만 숨겨서 화면에선 계속 보였음) */
+  .theme-toggle-btn{display:none !important;}
 
   /* ===== [CJ] 표준운송장 규격 (123mm x 100mm, CJ 표준운송장 가이드 2025.11 개정판 준용) =====
      글꼴은 가이드 지정 "Noto Sans Korea Bold / HY견고딕" 중 웹폰트로 배포되는 Noto Sans KR(Bold/Black)을
@@ -51,8 +55,14 @@
      align-items:center로 위아래 블록에 걸쳐 튀어나온 부분끼리 겹쳐 찍히는 사고가 실제로 발생함
      (주소약칭 "원천 627 테라타워" 줄과 보내는분 "수량/운임/정산" 줄이 겹쳐 인쇄됨).
      그래서 전부 flex-basis(고정) 대신 min-height(최소값)로 바꿈 — 가이드 비율은 그대로 하한선으로
-     유지하되, 실제 내용이 더 필요하면 박스가 늘어나서 다음 블록을 밀어낼지언정 절대 겹치지 않게 함. */
-  .l-head{flex-shrink:0; min-height:10mm; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #AFCBE8; gap:2mm;}
+     유지하되, 실제 내용이 더 필요하면 박스가 늘어나서 다음 블록을 밀어낼지언정 절대 겹치지 않게 함.
+     ⚠️ 2026.10.01 추가 피드백: 그런데 min-height를 가이드 비율(10/7/15mm) 그대로 두니 글자가 작은
+     헤더/보내는분/푸터 블록은 내용보다 훨씬 커서 빈 여백만 생기고, 그 빈 여백들이 쌓여서 라벨 전체
+     내용이 아래로 쳐져 보인다는 피드백을 받음("전체적으로 아래로 내려갔어 올려"). 큰 글씨(24pt/53pt)가
+     있어서 실제로 여유가 필요한 구역바코드(.l-zonebar)/받는분(.l-to)만 min-height를 남기고,
+     글자가 작아서 애초에 겹칠 위험이 없는 헤더/보내는분/푸터는 min-height를 빼고 내용 크기 그대로
+     (딱 필요한 만큼만) 차지하게 해서 전체적으로 위로 당김. */
+  .l-head{flex-shrink:0; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #AFCBE8; gap:2mm;}
   .l-head .no-label{color:#3E7FC1; font-size:8pt; font-weight:700; margin-right:1.5mm; vertical-align:top;}
   .l-head .no-value{font-weight:900; font-size:12pt; letter-spacing:0.3px;}
   .l-head .date{color:#333; font-size:8pt; font-weight:700;}
@@ -115,14 +125,14 @@
   .l-to-detail{font-size:24pt; font-weight:900; line-height:0.95; white-space:nowrap; transform-origin:left center;}
 
   /* 항목11(보내는분성명/전화번호, 가이드 표 기준 7pt) / 항목12~14(운임그룹조정+수량/운임/운임구분, 10pt) / 항목15(보내는분주소)
-     CJ 공식 가이드 PDF를 직접 열어서 확인(2026.10.01): 가이드 샘플 다이어그램에 "수량"/"운임"/"정산"
-     캡션이 값과 함께 찍혀있는 걸로 명확히 나와있음 — 즉 이 캡션들은 우리가 직접 인쇄하는 게 맞고,
-     어제(10.01) 사진만 보고 "캡션은 실물 인쇄라 빼야 한다"고 지웠던 게 가이드와 어긋나서 원복함.
-     다만 단어는 "결제"가 아니라 가이드 그대로 "정산"으로 고침. 보내는분 이름 글씨 크기도 가이드 표
-     그대로 7pt로 되돌림(어제 9pt로 올렸던 것도 가이드와 어긋났음). */
-  /* 가이드 좌측 세로치수 기준 보내는분 블록 높이는 7mm인데, 위 받는분 블록과 같은 이유로
-     flex-basis 고정이 아니라 min-height로 반영 (넘치면 늘어나되 절대 겹치지 않게) */
-  .l-from{flex-shrink:0; min-height:7mm;}
+     "받는분"/"보내는분" 캡션과 마찬가지로 "수량"/"운임"/"정산" 캡션도 실제로 쓰는 CJ 공백 운송장 용지에
+     이미 파란색으로 인쇄돼있다는 걸 사용자가 확인해줌(2026.10.01) — 가이드 PDF의 샘플 이미지는 그 캡션까지
+     포함한 "완성본" 미리보기였을 뿐, 우리 소프트웨어가 직접 찍어야 하는 항목이 아니었음. 그래서 캡션은
+     빼고 값만 출력(수량/운임/정산 → 숫자·"신용"만). 보내는분 이름 글씨 크기는 가이드 표 그대로 7pt 유지. */
+  /* 가이드 좌측 세로치수 기준 보내는분 블록 높이는 7mm지만, 글자가 7~10pt라 실제로는 그보다 작게
+     차지함 — min-height를 강제하면 빈 여백만 생겨 전체 내용이 아래로 쳐져 보여서(2026.10.01 피드백)
+     min-height 없이 내용 크기 그대로 둠(겹칠 위험도 없는 블록이라 안전함) */
+  .l-from{flex-shrink:0;}
   .l-from-main{flex:1; min-width:0;}
   .l-from-top{display:flex; justify-content:space-between; align-items:center;}
   .l-from-name{font-weight:700; font-size:7pt;}
@@ -156,10 +166,10 @@
      대신 분류코드(zc)/주소약칭(항목10)과 같은 "넘칠 때만 축소" 패턴을 적용해서 18pt를 유지하면서도
      길어지면 안전하게 줄어들게 함(.l-footer-zone-clip 바깥 래퍼 + .l-footer-zone 안쪽 축소 대상).
      받는분 주소약칭(항목10) 반복 표시줄(.l-footer-repeat)은 실물 라벨에 실제로 있는 걸 확인해서 유지.
-     "운임"/"결제" 캡션도 l-from-chips와 같은 이유로 가이드 기준 "정산"이 맞아서 복원+단어 수정. */
-  /* 가이드 좌측 세로치수 기준 푸터 블록 높이는 15mm인데, 위와 같은 이유로 flex-basis 고정이 아니라
-     min-height로 반영 (넘치면 늘어나되 절대 겹치지 않게) */
-  .l-footer{flex-shrink:0; min-height:15mm; box-sizing:border-box; display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px solid #000; padding-top:0.6mm;}
+     "운임"/"정산" 캡션은 l-from-chips와 같은 이유로 실물 용지에 이미 인쇄돼있어 값만 출력(2026.10.01). */
+  /* 가이드 좌측 세로치수 기준 푸터 블록 높이는 15mm지만, 항목18(18pt)이 제일 큰 글자라 실제로는
+     그보다 작게 차지함 — l-from과 같은 이유로 min-height 없이 내용 크기 그대로 둠 */
+  .l-footer{flex-shrink:0; box-sizing:border-box; display:flex; justify-content:space-between; align-items:flex-end; border-top:1.5px solid #000; padding-top:0.6mm;}
   .l-footer-left{flex:1; min-width:0; overflow:hidden;}
   .l-footer-repeat{font-size:8pt; color:#555; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .l-footer-zone-clip{overflow:hidden; min-width:0;}
@@ -358,9 +368,9 @@
             <div class="l-from-top">
               <span class="l-from-name">${store.name ? esc(store.name) : '(내정보에서 출고지 정보를 설정해주세요)'}　${esc(store.phone) || '-'}</span>
               <span class="l-from-chips">
-                <span><span class="chip-label">수량</span>${formatWon(order['수량'])}</span>
-                <span><span class="chip-label">운임</span>0</span>
-                <span><span class="chip-label">정산</span>신용</span>
+                <span>${formatWon(order['수량'])}</span>
+                <span>0</span>
+                <span>신용</span>
               </span>
             </div>
             <div class="l-from-bottom">
@@ -384,7 +394,7 @@
           <div class="l-footer-mid">
             <div class="l-footer-qty">총수량 : ${formatWon(order['수량'])}</div>
             <div class="l-footer-page">(1/1)</div>
-            <div class="l-footer-chips">운임 0　정산 신용</div>
+            <div class="l-footer-chips">0　신용</div>
           </div>
           <div class="l-footer-right">
             <svg id="${barcodeIdFooter}"></svg>
