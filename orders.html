@@ -21,6 +21,45 @@
     padding:7px 14px; border-radius:999px; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0;}
   .filter-tabs button.active{background:var(--amber); color:var(--navy);}
 
+  /* ===== 날짜 범위 필터(주문일/출력일) ===== */
+  .date-filter-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; position:relative;}
+  .date-filter-btn{display:flex; align-items:center; gap:6px; border:1.5px solid var(--line); background:var(--surface);
+    color:var(--ink-mute); font-size:12.5px; font-weight:600; padding:9px 12px; border-radius:8px; cursor:pointer;
+    font-family:inherit; white-space:nowrap;}
+  .date-filter-btn.active{border-color:var(--amber); color:var(--ink); background:var(--amber-soft);}
+  .date-filter-btn .clear-x{margin-left:2px; opacity:0.6;}
+  .date-filter-btn .clear-x:hover{opacity:1;}
+  .date-popover{position:absolute; top:calc(100% + 6px); left:0; z-index:80; background:var(--surface);
+    border:1px solid var(--line); border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.18); padding:14px;
+    display:none; width:min(560px, 92vw);}
+  .date-popover.open{display:block;}
+  .date-popover-presets{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+  .preset-btn{border:1px solid var(--line); background:var(--bg); color:var(--ink); font-size:12.5px; font-weight:600;
+    padding:7px 11px; border-radius:999px; cursor:pointer; font-family:inherit;}
+  .preset-btn:hover{border-color:var(--amber);}
+  .date-popover-cals{display:flex; gap:18px; flex-wrap:wrap;}
+  .cal-box{flex:1; min-width:220px;}
+  .cal-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-size:13px; font-weight:700;}
+  .cal-nav button{border:0; background:none; color:var(--ink-mute); font-size:16px; cursor:pointer; padding:2px 8px; font-family:inherit;}
+  .cal-nav button:hover{color:var(--ink);}
+  .cal-grid{display:grid; grid-template-columns:repeat(7, 1fr); gap:2px; font-size:12px;}
+  .cal-dow{text-align:center; color:var(--ink-mute); font-weight:600; padding:4px 0; font-size:11px;}
+  .cal-day{text-align:center; padding:6px 0; border-radius:6px; cursor:pointer; color:var(--ink);}
+  .cal-day.other-month{color:var(--ink-mute); opacity:0.35; cursor:default;}
+  .cal-day:not(.other-month):hover{background:var(--bg);}
+  .cal-day.in-range{background:var(--amber-soft); border-radius:0;}
+  .cal-day.range-start{background:var(--amber); color:var(--navy); font-weight:700; border-radius:6px 0 0 6px;}
+  .cal-day.range-end{background:var(--amber); color:var(--navy); font-weight:700; border-radius:0 6px 6px 0;}
+  .cal-day.range-start.range-end{border-radius:6px;}
+  .date-popover-footer{display:flex; justify-content:space-between; align-items:center; margin-top:12px;
+    padding-top:12px; border-top:1px dashed var(--line);}
+  .date-range-text{font-size:12px; color:var(--ink-mute);}
+  .date-popover-btn{border:0; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:700;
+    font-family:inherit; cursor:pointer;}
+  .date-popover-btn.ghost{background:none; color:var(--ink-mute);}
+  .date-popover-btn.primary{background:var(--navy); color:#fff;}
+  @media (max-width: 520px){ .date-popover-cals{flex-direction:column;} }
+
   .order-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:10px; cursor:pointer;}
   .order-top{display:flex; align-items:center; gap:6px; margin-bottom:8px;}
   .order-date{font-size:11px; color:var(--ink-mute); margin-left:auto;}
@@ -225,6 +264,55 @@
           <button class="collect-run-btn" id="excelUploadBtn">엑셀 업로드해서 주문 추가</button>
           <div class="collect-result" id="excelUploadResult"></div>
         </div></div></div>
+      </div>
+    </div>
+
+    <div class="date-filter-row" id="dateFilterRow">
+      <button type="button" class="date-filter-btn" id="orderDateBtn" data-field="order">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span id="orderDateLabel">주문일 시작~종료</span>
+        <span class="clear-x" id="orderDateClear" style="display:none;" title="초기화">&times;</span>
+      </button>
+      <button type="button" class="date-filter-btn" id="printDateBtn" data-field="print">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span id="printDateLabel">출력일 시작~종료</span>
+        <span class="clear-x" id="printDateClear" style="display:none;" title="초기화">&times;</span>
+      </button>
+
+      <div class="date-popover" id="datePopover">
+        <div class="date-popover-presets">
+          <button type="button" class="preset-btn" data-preset="today">오늘</button>
+          <button type="button" class="preset-btn" data-preset="week">최근 일주일</button>
+          <button type="button" class="preset-btn" data-preset="month1">최근 한달</button>
+          <button type="button" class="preset-btn" data-preset="month2">최근 2개월</button>
+          <button type="button" class="preset-btn" data-preset="month3">최근 3개월</button>
+          <button type="button" class="preset-btn" data-preset="thisMonth">이번달</button>
+        </div>
+        <div class="date-popover-cals">
+          <div class="cal-box">
+            <div class="cal-nav">
+              <button type="button" id="calLeftPrev">&lsaquo;</button>
+              <span id="calLeftLabel"></span>
+              <button type="button" id="calLeftNext">&rsaquo;</button>
+            </div>
+            <div class="cal-grid" id="calGridLeft"></div>
+          </div>
+          <div class="cal-box">
+            <div class="cal-nav">
+              <button type="button" id="calRightPrev">&lsaquo;</button>
+              <span id="calRightLabel"></span>
+              <button type="button" id="calRightNext">&rsaquo;</button>
+            </div>
+            <div class="cal-grid" id="calGridRight"></div>
+          </div>
+        </div>
+        <div class="date-popover-footer">
+          <span class="date-range-text" id="datePopoverRangeText">날짜를 선택해주세요</span>
+          <div>
+            <button type="button" class="date-popover-btn ghost" id="dateClearBtn">초기화</button>
+            <button type="button" class="date-popover-btn primary" id="dateApplyBtn">적용</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -513,6 +601,13 @@
   let selectedIds = new Set();
   let __ordersCache = null; // 탭 전환 시 재사용할 마지막 주문 목록 캐시
 
+  // ===== 날짜 범위 필터(주문일/출력일) 상태 =====
+  let orderDateRange = null; // {from:'YYYY-MM-DD', to:'YYYY-MM-DD'}
+  let printDateRange = null;
+  let activeDateField = null; // 팝오버 열 때 'order' 또는 'print'
+  let pendingFrom = null, pendingTo = null; // 팝오버에서 고르는 중인 범위
+  let calLeftYM = null, calRightYM = null; // {y, m(0~11)} 팝오버에 보여줄 두 달
+
   async function loadOrders(status, forceRefresh) {
     const refreshBtn = document.getElementById('refreshBtn');
     refreshBtn.classList.add('spinning');
@@ -525,7 +620,14 @@
       // 탭(카테고리) 전환은 클라이언트에서 필터링해서 처리 (탭 전환 속도 개선)
       const listParams = {};
       if (currentShippingType && !searchTerm) listParams.shippingType = currentShippingType;
-      const cacheKey = (currentShippingType && !searchTerm) ? currentShippingType : '__all__';
+      let dateFilter = null;
+      if (orderDateRange || printDateRange) {
+        dateFilter = {};
+        if (orderDateRange) { dateFilter.orderFrom = orderDateRange.from; dateFilter.orderTo = orderDateRange.to; }
+        if (printDateRange) { dateFilter.printFrom = printDateRange.from; dateFilter.printTo = printDateRange.to; }
+        listParams.dateFilter = dateFilter;
+      }
+      const cacheKey = ((currentShippingType && !searchTerm) ? currentShippingType : '__all__') + '|' + (dateFilter ? JSON.stringify(dateFilter) : '');
       const CACHE_TTL_MS = 15000;
       let data;
       if (!forceRefresh && __ordersCache && __ordersCache.key === cacheKey && (Date.now() - __ordersCache.ts) < CACHE_TTL_MS) {
@@ -893,6 +995,226 @@
     btn.classList.add('active');
     currentStatus = btn.dataset.status;
     loadOrders(currentStatus);
+  });
+
+  // ===== 날짜 범위 필터(주문일/출력일) 팝오버 =====
+  const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
+  function fmtYMD_(y, m, d) {
+    return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  }
+  function fmtShort_(ymd) {
+    // 'YYYY-MM-DD' -> 'MM.DD'
+    const parts = ymd.split('-');
+    return parts[1] + '.' + parts[2];
+  }
+  function parseYMD_(ymd) {
+    const [y, m, d] = ymd.split('-').map(Number);
+    return { y, m: m - 1, d };
+  }
+  function todayYMD_() {
+    const t = new Date();
+    return fmtYMD_(t.getFullYear(), t.getMonth(), t.getDate());
+  }
+
+  function updateDateBtnLabel_(field) {
+    const range = field === 'order' ? orderDateRange : printDateRange;
+    const labelEl = document.getElementById(field === 'order' ? 'orderDateLabel' : 'printDateLabel');
+    const clearEl = document.getElementById(field === 'order' ? 'orderDateClear' : 'printDateClear');
+    const btnEl = document.getElementById(field === 'order' ? 'orderDateBtn' : 'printDateBtn');
+    if (range) {
+      labelEl.textContent = fmtShort_(range.from) + ' ~ ' + fmtShort_(range.to);
+      clearEl.style.display = '';
+      btnEl.classList.add('active');
+    } else {
+      labelEl.textContent = (field === 'order' ? '주문일' : '출력일') + ' 시작~종료';
+      clearEl.style.display = 'none';
+      btnEl.classList.remove('active');
+    }
+  }
+
+  function renderCalGrid_(gridEl, labelEl, ym) {
+    labelEl.textContent = ym.y + '년 ' + (ym.m + 1) + '월';
+    let html = DOW_LABELS.map(d => '<div class="cal-dow">' + d + '</div>').join('');
+    const firstDow = new Date(ym.y, ym.m, 1).getDay();
+    const daysInMonth = new Date(ym.y, ym.m + 1, 0).getDate();
+    const prevDaysInMonth = new Date(ym.y, ym.m, 0).getDate();
+
+    const cells = [];
+    for (let i = firstDow - 1; i >= 0; i--) cells.push({ y: ym.y, m: ym.m - 1, d: prevDaysInMonth - i, other: true });
+    for (let d = 1; d <= daysInMonth; d++) cells.push({ y: ym.y, m: ym.m, d, other: false });
+    while (cells.length % 7 !== 0) {
+      const last = cells[cells.length - 1];
+      cells.push({ y: last.y, m: last.m, d: last.d + 1, other: true });
+    }
+
+    cells.forEach(c => {
+      // 월이 -1/12를 넘어가는 경우 보정
+      const norm = new Date(c.y, c.m, c.d);
+      const ymd = fmtYMD_(norm.getFullYear(), norm.getMonth(), norm.getDate());
+      let cls = 'cal-day' + (c.other ? ' other-month' : '');
+      if (!c.other) {
+        if (pendingFrom && ymd === pendingFrom) cls += ' range-start';
+        if (pendingTo && ymd === pendingTo) cls += ' range-end';
+        if (pendingFrom && pendingTo && ymd > pendingFrom && ymd < pendingTo) cls += ' in-range';
+        if (pendingFrom && !pendingTo && ymd === pendingFrom) cls += ' range-end';
+      }
+      html += '<div class="' + cls + '" data-ymd="' + (c.other ? '' : ymd) + '">' + c.d + '</div>';
+    });
+    gridEl.innerHTML = html;
+  }
+
+  function renderCalendars_() {
+    renderCalGrid_(document.getElementById('calGridLeft'), document.getElementById('calLeftLabel'), calLeftYM);
+    renderCalGrid_(document.getElementById('calGridRight'), document.getElementById('calRightLabel'), calRightYM);
+    const rangeText = document.getElementById('datePopoverRangeText');
+    if (pendingFrom && pendingTo) {
+      rangeText.textContent = fmtShort_(pendingFrom) + ' ~ ' + fmtShort_(pendingTo);
+    } else if (pendingFrom) {
+      rangeText.textContent = fmtShort_(pendingFrom) + ' ~ (종료일을 선택해주세요)';
+    } else {
+      rangeText.textContent = '날짜를 선택해주세요';
+    }
+  }
+
+  function openDatePopover_(field) {
+    activeDateField = field;
+    const existing = field === 'order' ? orderDateRange : printDateRange;
+    pendingFrom = existing ? existing.from : null;
+    pendingTo = existing ? existing.to : null;
+
+    const base = existing ? parseYMD_(existing.from) : (() => { const t = new Date(); return { y: t.getFullYear(), m: t.getMonth() }; })();
+    calLeftYM = { y: base.y, m: base.m };
+    const rightDate = new Date(base.y, base.m + 1, 1);
+    calRightYM = { y: rightDate.getFullYear(), m: rightDate.getMonth() };
+
+    document.querySelectorAll('.date-filter-btn').forEach(b => b.classList.toggle('open-target', b.dataset.field === field));
+    const popover = document.getElementById('datePopover');
+    const anchorBtn = document.getElementById(field === 'order' ? 'orderDateBtn' : 'printDateBtn');
+    popover.style.left = anchorBtn.offsetLeft + 'px';
+    popover.classList.add('open');
+    renderCalendars_();
+  }
+
+  function closeDatePopover_() {
+    document.getElementById('datePopover').classList.remove('open');
+    activeDateField = null;
+  }
+
+  function applyPendingRange_() {
+    if (!pendingFrom || !pendingTo || !activeDateField) return;
+    const range = { from: pendingFrom, to: pendingTo };
+    if (activeDateField === 'order') orderDateRange = range; else printDateRange = range;
+    updateDateBtnLabel_(activeDateField);
+    closeDatePopover_();
+    loadOrders(currentStatus, true);
+  }
+
+  function clearActiveRange_() {
+    if (!activeDateField) return;
+    if (activeDateField === 'order') orderDateRange = null; else printDateRange = null;
+    pendingFrom = null; pendingTo = null;
+    updateDateBtnLabel_(activeDateField);
+    closeDatePopover_();
+    loadOrders(currentStatus, true);
+  }
+
+  function applyPreset_(preset) {
+    const t = new Date();
+    const todayStr = todayYMD_();
+    let fromStr = todayStr;
+    if (preset === 'today') {
+      fromStr = todayStr;
+    } else if (preset === 'week') {
+      const d = new Date(); d.setDate(d.getDate() - 6);
+      fromStr = fmtYMD_(d.getFullYear(), d.getMonth(), d.getDate());
+    } else if (preset === 'month1') {
+      const d = new Date(); d.setMonth(d.getMonth() - 1);
+      fromStr = fmtYMD_(d.getFullYear(), d.getMonth(), d.getDate());
+    } else if (preset === 'month2') {
+      const d = new Date(); d.setMonth(d.getMonth() - 2);
+      fromStr = fmtYMD_(d.getFullYear(), d.getMonth(), d.getDate());
+    } else if (preset === 'month3') {
+      const d = new Date(); d.setMonth(d.getMonth() - 3);
+      fromStr = fmtYMD_(d.getFullYear(), d.getMonth(), d.getDate());
+    } else if (preset === 'thisMonth') {
+      fromStr = fmtYMD_(t.getFullYear(), t.getMonth(), 1);
+    }
+    pendingFrom = fromStr;
+    pendingTo = todayStr;
+    applyPendingRange_();
+  }
+
+  document.getElementById('orderDateBtn').addEventListener('click', (e) => {
+    if (e.target.closest('.clear-x')) return;
+    if (activeDateField === 'order' && document.getElementById('datePopover').classList.contains('open')) { closeDatePopover_(); return; }
+    openDatePopover_('order');
+  });
+  document.getElementById('printDateBtn').addEventListener('click', (e) => {
+    if (e.target.closest('.clear-x')) return;
+    if (activeDateField === 'print' && document.getElementById('datePopover').classList.contains('open')) { closeDatePopover_(); return; }
+    openDatePopover_('print');
+  });
+  document.getElementById('orderDateClear').addEventListener('click', (e) => {
+    e.stopPropagation();
+    orderDateRange = null;
+    updateDateBtnLabel_('order');
+    loadOrders(currentStatus, true);
+  });
+  document.getElementById('printDateClear').addEventListener('click', (e) => {
+    e.stopPropagation();
+    printDateRange = null;
+    updateDateBtnLabel_('print');
+    loadOrders(currentStatus, true);
+  });
+
+  document.getElementById('datePopover').addEventListener('click', (e) => {
+    const presetBtn = e.target.closest('.preset-btn');
+    if (presetBtn) { applyPreset_(presetBtn.dataset.preset); return; }
+
+    const dayCell = e.target.closest('.cal-day:not(.other-month)');
+    if (dayCell && dayCell.dataset.ymd) {
+      const ymd = dayCell.dataset.ymd;
+      if (!pendingFrom || (pendingFrom && pendingTo)) {
+        pendingFrom = ymd; pendingTo = null;
+      } else {
+        if (ymd < pendingFrom) { pendingTo = pendingFrom; pendingFrom = ymd; }
+        else { pendingTo = ymd; }
+      }
+      renderCalendars_();
+      return;
+    }
+
+    if (e.target.id === 'calLeftPrev' || e.target.id === 'calLeftNext') {
+      const dir = e.target.id === 'calLeftPrev' ? -1 : 1;
+      const d = new Date(calLeftYM.y, calLeftYM.m + dir, 1);
+      calLeftYM = { y: d.getFullYear(), m: d.getMonth() };
+      renderCalendars_();
+      return;
+    }
+    if (e.target.id === 'calRightPrev' || e.target.id === 'calRightNext') {
+      const dir = e.target.id === 'calRightPrev' ? -1 : 1;
+      const d = new Date(calRightYM.y, calRightYM.m + dir, 1);
+      calRightYM = { y: d.getFullYear(), m: d.getMonth() };
+      renderCalendars_();
+      return;
+    }
+
+    if (e.target.id === 'dateApplyBtn') { applyPendingRange_(); return; }
+    if (e.target.id === 'dateClearBtn') { clearActiveRange_(); return; }
+  });
+
+  document.addEventListener('click', (e) => {
+    const popover = document.getElementById('datePopover');
+    if (!popover.classList.contains('open')) return;
+    // composedPath()를 써야 함: 달력 날짜를 클릭하면 같은 클릭 이벤트 처리 중에
+    // innerHTML이 다시 그려져서 클릭된 셀이 DOM에서 분리되는데, 그 뒤에 e.target.closest()를
+    // 쓰면 이미 분리된 엘리먼트라 조상을 못 찾아서 "바깥 클릭"으로 잘못 판단해버림.
+    // composedPath()는 이벤트가 발생했던 시점의 경로를 그대로 담고 있어서 이 문제가 없음.
+    const path = e.composedPath ? e.composedPath() : [];
+    const insidePopover = path.some(el => el.id === 'datePopover' || (el.classList && el.classList.contains('date-filter-btn')));
+    if (insidePopover) return;
+    closeDatePopover_();
   });
 
   // 검색
