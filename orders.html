@@ -608,6 +608,12 @@
   let pendingFrom = null, pendingTo = null; // 팝오버에서 고르는 중인 범위
   let calLeftYM = null, calRightYM = null; // {y, m(0~11)} 팝오버에 보여줄 두 달
 
+  // 이미 처리된 결과를 보는 탭은 기본적으로 "오늘(출력일)"만 보여주고,
+  // 아직 처리할 게 남아있는 탭(미출력/반품/보류/취소/미전송)은 날짜와 무관하게 전체를 보여줌.
+  // 사용자가 날짜 팝오버로 직접 검색하면(manualDateFilterActive) 그 선택을 탭 전환 중에도 유지함.
+  const TODAY_DEFAULT_STATUSES = ['송장출력완료', '발송완료'];
+  let manualDateFilterActive = false;
+
   async function loadOrders(status, forceRefresh) {
     const refreshBtn = document.getElementById('refreshBtn');
     refreshBtn.classList.add('spinning');
@@ -994,6 +1000,7 @@
     document.querySelectorAll('#filterTabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentStatus = btn.dataset.status;
+    applyDefaultDateFilterForStatus_(currentStatus);
     loadOrders(currentStatus);
   });
 
@@ -1015,6 +1022,21 @@
   function todayYMD_() {
     const t = new Date();
     return fmtYMD_(t.getFullYear(), t.getMonth(), t.getDate());
+  }
+
+  // 탭에 맞는 기본 날짜 필터를 적용 (사용자가 직접 날짜를 검색 중이면 건드리지 않음)
+  function applyDefaultDateFilterForStatus_(status) {
+    if (manualDateFilterActive) return;
+    if (TODAY_DEFAULT_STATUSES.includes(status)) {
+      const t = todayYMD_();
+      printDateRange = { from: t, to: t };
+      orderDateRange = null;
+    } else {
+      printDateRange = null;
+      orderDateRange = null;
+    }
+    updateDateBtnLabel_('order');
+    updateDateBtnLabel_('print');
   }
 
   function updateDateBtnLabel_(field) {
@@ -1104,6 +1126,7 @@
   function applyPendingRange_() {
     if (!pendingFrom || !pendingTo || !activeDateField) return;
     const range = { from: pendingFrom, to: pendingTo };
+    manualDateFilterActive = true; // 사용자가 직접 날짜를 골랐으므로 탭 전환 시 기본값으로 덮어쓰지 않음
     if (activeDateField === 'order') orderDateRange = range; else printDateRange = range;
     updateDateBtnLabel_(activeDateField);
     closeDatePopover_();
@@ -1116,6 +1139,11 @@
     pendingFrom = null; pendingTo = null;
     updateDateBtnLabel_(activeDateField);
     closeDatePopover_();
+    // 두 필터 다 비워졌으면 수동 검색 모드를 해제하고 탭별 기본 필터로 되돌아감
+    if (!orderDateRange && !printDateRange) {
+      manualDateFilterActive = false;
+      applyDefaultDateFilterForStatus_(currentStatus);
+    }
     loadOrders(currentStatus, true);
   }
 
@@ -1159,12 +1187,20 @@
     e.stopPropagation();
     orderDateRange = null;
     updateDateBtnLabel_('order');
+    if (!orderDateRange && !printDateRange) {
+      manualDateFilterActive = false;
+      applyDefaultDateFilterForStatus_(currentStatus);
+    }
     loadOrders(currentStatus, true);
   });
   document.getElementById('printDateClear').addEventListener('click', (e) => {
     e.stopPropagation();
     printDateRange = null;
     updateDateBtnLabel_('print');
+    if (!orderDateRange && !printDateRange) {
+      manualDateFilterActive = false;
+      applyDefaultDateFilterForStatus_(currentStatus);
+    }
     loadOrders(currentStatus, true);
   });
 
@@ -1667,6 +1703,7 @@
     }
   });
 
+  applyDefaultDateFilterForStatus_(currentStatus);
   loadOrders(currentStatus, true);
   loadChannelListForCollect(); // 미리 불러와서 주문수집 패널을 열 때 바로 보이게 함
 
