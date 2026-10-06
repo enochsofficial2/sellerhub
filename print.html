@@ -344,7 +344,7 @@
     return html;
   }
 
-  function renderLabel(order, store, idx) {
+  function renderLabel(order, store, idx, total) {
     const trackingNo = String(order['송장_송장번호'] || '');
     const isTemp = trackingNo.indexOf('999') === 0 || trackingNo.indexOf('998') === 0;
     const isFreshTemp = trackingNo.indexOf('998') === 0;
@@ -379,7 +379,7 @@
         <div class="l-head">
           <div><span class="no-label" style="visibility:hidden">운송장번호</span><span class="no-value">${esc(formatTrackingDisplay(trackingNo)) || '-'}</span></div>
           <div class="date">${esc(dateStr)}</div>
-          <div class="page">1/1</div>
+          <div class="page">${idx + 1}/${total}</div>
           <div class="reprint">-</div>
         </div>
 
@@ -427,7 +427,7 @@
           </div>
           <div class="l-footer-mid">
             <div class="l-footer-qty">총수량 : ${formatWon(order['수량'])}</div>
-            <div class="l-footer-page">(1/1)</div>
+            <div class="l-footer-page">(${idx + 1}/${total})</div>
             <div class="l-footer-chips">0　신용</div>
           </div>
           <div class="l-footer-right">
@@ -571,7 +571,7 @@
         batchNote += `<div class="batch-note" style="color:#D64545; font-weight:700;">⚠ ${failedCount}건은 정보를 불러오지 못해 라벨에서 빠졌어요. 새로고침 후 다시 시도해주세요.</div>`;
       }
 
-      contentEl.innerHTML = batchNote + validOrders.map((o, i) => renderLabel(o, store, i)).join('');
+      contentEl.innerHTML = batchNote + validOrders.map((o, i) => renderLabel(o, store, i, validOrders.length)).join('');
 
       drawBarcodes(validOrders);
       fitZoneCode();
